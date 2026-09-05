@@ -10,6 +10,7 @@ namespace Stormframe.Construction
         private readonly Dictionary<Vector3Int, Guid> _occupancy = new();
 
         public int PieceCount => _pieces.Count;
+        public IReadOnlyCollection<PlacedPiece> Pieces => _pieces.Values;
 
         public bool CanPlace(PieceKind kind, Vector3Int anchor, int quarterTurns)
         {
@@ -30,13 +31,23 @@ namespace Stormframe.Construction
             int quarterTurns,
             out PlacedPiece piece)
         {
+            return TryPlace(Guid.NewGuid(), kind, anchor, quarterTurns, out piece);
+        }
+
+        public bool TryPlace(
+            Guid id,
+            PieceKind kind,
+            Vector3Int anchor,
+            int quarterTurns,
+            out PlacedPiece piece)
+        {
             piece = null;
-            if (!CanPlace(kind, anchor, quarterTurns))
+            if (_pieces.ContainsKey(id) || !CanPlace(kind, anchor, quarterTurns))
             {
                 return false;
             }
 
-            piece = new PlacedPiece(Guid.NewGuid(), kind, anchor, quarterTurns);
+            piece = new PlacedPiece(id, kind, anchor, quarterTurns);
             _pieces.Add(piece.Id, piece);
             foreach (Vector3Int cell in PieceGeometry.OccupiedCells(kind, anchor, quarterTurns))
             {
@@ -49,7 +60,12 @@ namespace Stormframe.Construction
         public bool TryRemoveAt(Vector3Int cell, out PlacedPiece piece)
         {
             piece = null;
-            if (!_occupancy.TryGetValue(cell, out Guid id) || !_pieces.Remove(id, out piece))
+            return _occupancy.TryGetValue(cell, out Guid id) && TryRemove(id, out piece);
+        }
+
+        public bool TryRemove(Guid id, out PlacedPiece piece)
+        {
+            if (!_pieces.Remove(id, out piece))
             {
                 return false;
             }
@@ -63,6 +79,12 @@ namespace Stormframe.Construction
             }
 
             return true;
+        }
+
+        public void Clear()
+        {
+            _pieces.Clear();
+            _occupancy.Clear();
         }
     }
 }

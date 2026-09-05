@@ -20,6 +20,9 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 - `V`: cycle modular (seamed), natural, and blockout visual treatments
 - Left click: place
 - Right click: delete
+- `C`: pick the pointed-at piece type and rotation
+- `Ctrl+Z` / `Ctrl+Y`: undo / redo
+- `Ctrl+S` / `Ctrl+L`: save / load construction
 
 ## Validation
 

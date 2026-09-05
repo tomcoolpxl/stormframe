@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.IO;
+using Stormframe.Construction.Commands;
+using Stormframe.Construction.Persistence;
 using Stormframe.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,6 +11,7 @@ namespace Stormframe.Construction
     public sealed class ConstructionController : MonoBehaviour
     {
         private readonly ConstructionWorld _world = new();
+        private readonly ConstructionCommandHistory _history = new();
         private readonly Dictionary<System.Guid, GameObject> _views = new();
         private Camera _camera;
         private ThirdPersonCamera _thirdPersonCamera;
@@ -17,6 +21,7 @@ namespace Stormframe.Construction
         private Vector3Int _candidateCell;
         private int _quarterTurns;
         private bool _hasCandidate;
+        private string _status = "Ready";
 
         private void Awake()
         {
@@ -29,6 +34,7 @@ namespace Stormframe.Construction
             if (Keyboard.current == null || Mouse.current == null) return;
 
             ReadSelection();
+            ReadEditingCommands();
             UpdateCandidate();
 
             if (Keyboard.current.rKey.wasPressedThisFrame)
@@ -50,6 +56,35 @@ namespace Stormframe.Construction
             if (Mouse.current.rightButton.wasPressedThisFrame)
             {
                 RemovePointedPiece();
+            }
+        }
+
+        private void ReadEditingCommands()
+        {
+            Keyboard keyboard = Keyboard.current;
+            bool control = keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed;
+
+            if (control && keyboard.zKey.wasPressedThisFrame && _history.Undo(_world))
+            {
+                RebuildViews();
+                _status = "Undo";
+            }
+            else if (control && keyboard.yKey.wasPressedThisFrame && _history.Redo(_world))
+            {
+                RebuildViews();
+                _status = "Redo";
+            }
+            else if (control && keyboard.sKey.wasPressedThisFrame)
+            {
+                SaveConstruction();
+            }
+            else if (control && keyboard.lKey.wasPressedThisFrame)
+            {
+                LoadConstruction();
+            }
+            else if (keyboard.cKey.wasPressedThisFrame)
+            {
+                PickPointedPiece();
             }
         }
 
@@ -97,20 +132,24 @@ namespace Stormframe.Construction
 
         private void PlaceCandidate()
         {
-            if (!_world.TryPlace(_selectedKind, _candidateCell, _quarterTurns, out PlacedPiece piece))
+            if (!_history.Execute(
+                    new PlacePieceCommand(_selectedKind, _candidateCell, _quarterTurns),
+                    _world))
             {
                 return;
             }
 
-            _views.Add(piece.Id, PieceViewFactory.Create(piece, false, _visualStyle));
+            RebuildViews();
+            _status = $"Placed {_selectedKind}";
         }
 
         private void RemovePointedPiece()
         {
             if (!TryRaycast(out RaycastHit hit)) return;
             PlacedPieceView view = hit.collider.GetComponentInParent<PlacedPieceView>();
-            if (view == null || !_world.TryRemoveAt(view.Anchor, out PlacedPiece removed)) return;
-            if (_views.Remove(removed.Id, out GameObject gameObject)) Destroy(gameObject);
+            if (view == null || !_history.Execute(new RemovePieceCommand(view.Anchor), _world)) return;
+            RebuildViews();
+            _status = "Removed piece";
         }
 
         private bool TryRaycast(out RaycastHit hit)
@@ -137,14 +176,69 @@ namespace Stormframe.Construction
             if (_ghost != null) _ghost.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
         }
 
+        private void PickPointedPiece()
+        {
+            if (!TryRaycast(out RaycastHit hit)) return;
+            PlacedPieceView view = hit.collider.GetComponentInParent<PlacedPieceView>();
+            if (view == null) return;
+            foreach (PlacedPiece piece in _world.Pieces)
+            {
+                if (piece.Id != view.PieceId) continue;
+                _selectedKind = piece.Kind;
+                _quarterTurns = piece.QuarterTurns;
+                RebuildGhost();
+                _status = $"Picked {piece.Kind}";
+                return;
+            }
+        }
+
+        private void RebuildViews()
+        {
+            foreach (GameObject view in _views.Values) Destroy(view);
+            _views.Clear();
+            foreach (PlacedPiece piece in _world.Pieces)
+            {
+                _views.Add(piece.Id, PieceViewFactory.Create(piece, false, _visualStyle));
+            }
+        }
+
+        private void SaveConstruction()
+        {
+            string path = Path.Combine(Application.persistentDataPath, "construction.json");
+            File.WriteAllText(path, ConstructionSaveSerializer.Serialize(_world));
+            _status = $"Saved {_world.PieceCount} pieces";
+        }
+
+        private void LoadConstruction()
+        {
+            string path = Path.Combine(Application.persistentDataPath, "construction.json");
+            if (!File.Exists(path))
+            {
+                _status = "No construction save found";
+                return;
+            }
+
+            if (!ConstructionSaveSerializer.TryRestore(File.ReadAllText(path), _world, out string error))
+            {
+                _status = $"Load failed: {error}";
+                return;
+            }
+
+            _history.Clear();
+            RebuildViews();
+            _status = $"Loaded {_world.PieceCount} pieces";
+        }
+
         private void OnGUI()
         {
-            GUI.Box(new Rect(16, 16, 410, 128), "Stormframe Construction Prototype");
+            GUI.Box(new Rect(16, 16, 430, 168), "Stormframe Construction Prototype");
             GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 310, 22), $"Left place | Right delete | Pieces: {_world.PieceCount}");
             GUI.Label(new Rect(28, 102, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
             GUI.Label(new Rect(28, 122, 375, 22), $"V visual style: {_visualStyle}");
+            GUI.Label(new Rect(28, 142, 395, 22), "C pick | Ctrl+Z undo | Ctrl+Y redo | Ctrl+S/L save/load");
+            GUI.Label(new Rect(28, 162, 395, 22), $"Selected: {_selectedKind} | {_status}");
         }
     }
 }
