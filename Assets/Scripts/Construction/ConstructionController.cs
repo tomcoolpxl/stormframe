@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Stormframe.Construction
 {
@@ -21,21 +22,23 @@ namespace Stormframe.Construction
 
         private void Update()
         {
+            if (Keyboard.current == null || Mouse.current == null) return;
+
             ReadSelection();
             UpdateCandidate();
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (Keyboard.current.rKey.wasPressedThisFrame)
             {
                 _quarterTurns = (_quarterTurns + 1) % 4;
                 RebuildGhost();
             }
 
-            if (_hasCandidate && Input.GetMouseButtonDown(0))
+            if (_hasCandidate && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 PlaceCandidate();
             }
 
-            if (Input.GetMouseButtonDown(1))
+            if (Mouse.current.rightButton.wasPressedThisFrame)
             {
                 RemovePointedPiece();
             }
@@ -44,10 +47,10 @@ namespace Stormframe.Construction
         private void ReadSelection()
         {
             PieceKind previous = _selectedKind;
-            if (Input.GetKeyDown(KeyCode.Alpha1)) _selectedKind = PieceKind.Cube;
-            if (Input.GetKeyDown(KeyCode.Alpha2)) _selectedKind = PieceKind.Beam;
-            if (Input.GetKeyDown(KeyCode.Alpha3)) _selectedKind = PieceKind.Plate;
-            if (Input.GetKeyDown(KeyCode.Alpha4)) _selectedKind = PieceKind.Slope;
+            if (Keyboard.current.digit1Key.wasPressedThisFrame) _selectedKind = PieceKind.Cube;
+            if (Keyboard.current.digit2Key.wasPressedThisFrame) _selectedKind = PieceKind.Beam;
+            if (Keyboard.current.digit3Key.wasPressedThisFrame) _selectedKind = PieceKind.Plate;
+            if (Keyboard.current.digit4Key.wasPressedThisFrame) _selectedKind = PieceKind.Slope;
             if (previous != _selectedKind) RebuildGhost();
         }
 
@@ -104,7 +107,7 @@ namespace Stormframe.Construction
 
         private bool TryRaycast(out RaycastHit hit)
         {
-            Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
+            Ray ray = _camera.ScreenPointToRay(Mouse.current.position.ReadValue());
             return Physics.Raycast(ray, out hit, 250f, ~LayerMask.GetMask("Ignore Raycast"));
         }
 

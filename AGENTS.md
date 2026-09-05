@@ -15,7 +15,7 @@ Use the repository scripts from PowerShell:
 ./scripts/Build.ps1
 ```
 
-The first command runs Edit Mode tests and writes `TestResults.xml`. The second creates `Builds/Windows/Stormframe.exe`. Both resolve the editor version from `ProjectSettings/ProjectVersion.txt`. For interactive work, add this directory in Unity Hub.
+The first command runs Edit Mode and Play Mode tests. The second creates `Builds/Windows/Stormframe.exe`. Both resolve the editor version from `ProjectSettings/ProjectVersion.txt`. For interactive work, add this directory in Unity Hub.
 
 ## Coding Style & Naming Conventions
 

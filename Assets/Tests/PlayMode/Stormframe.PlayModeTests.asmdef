@@ -1,0 +1,12 @@
+{
+  "name": "Stormframe.PlayModeTests",
+  "rootNamespace": "Stormframe.Tests",
+  "references": [
+    "Stormframe.Runtime",
+    "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

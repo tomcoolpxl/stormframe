@@ -1,4 +1,7 @@
 {
   "name": "Stormframe.Runtime",
-  "rootNamespace": "Stormframe"
+  "rootNamespace": "Stormframe",
+  "references": [
+    "Unity.InputSystem"
+  ]
 }

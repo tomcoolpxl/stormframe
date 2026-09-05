@@ -2,18 +2,28 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'UnityEditor.ps1')
 
 $projectPath = Split-Path $PSScriptRoot -Parent
-$resultsPath = Join-Path $projectPath 'TestResults.xml'
-$logPath = Join-Path $projectPath 'unity-tests.log'
+$platforms = @('EditMode', 'PlayMode')
+$total = 0
+$passed = 0
 
-Invoke-StormframeUnity -Arguments @(
-    '-batchmode',
-    '-projectPath', $projectPath,
-    '-runTests',
-    '-testPlatform', 'EditMode',
-    '-testResults', $resultsPath,
-    '-logFile', $logPath
-)
+foreach ($platform in $platforms) {
+    $platformResultsPath = Join-Path $projectPath "TestResults-$platform.xml"
+    $platformLogPath = Join-Path $projectPath "unity-tests-$($platform.ToLowerInvariant()).log"
 
-[xml] $results = Get-Content -LiteralPath $resultsPath
-$run = $results.'test-run'
-Write-Output "Tests: $($run.result); passed $($run.passed)/$($run.total)"
+    Invoke-StormframeUnity -Arguments @(
+        '-batchmode',
+        '-projectPath', $projectPath,
+        '-runTests',
+        '-testPlatform', $platform,
+        '-testResults', $platformResultsPath,
+        '-logFile', $platformLogPath
+    )
+
+    [xml] $results = Get-Content -LiteralPath $platformResultsPath
+    $run = $results.'test-run'
+    $total += [int] $run.total
+    $passed += [int] $run.passed
+    Write-Output "$platform tests: $($run.result); passed $($run.passed)/$($run.total)"
+}
+
+Write-Output "All tests: passed $passed/$total"

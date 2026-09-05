@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Stormframe.Player
 {
@@ -18,13 +19,18 @@ namespace Stormframe.Player
         {
             if (_target == null) return;
 
-            if (Input.GetMouseButton(2))
+            Mouse mouse = Mouse.current;
+            if (mouse != null && mouse.middleButton.isPressed)
             {
-                _yaw += Input.GetAxis("Mouse X") * 4f;
-                _pitch = Mathf.Clamp(_pitch - Input.GetAxis("Mouse Y") * 3f, 15f, 75f);
+                Vector2 delta = mouse.delta.ReadValue();
+                _yaw += delta.x * 0.2f;
+                _pitch = Mathf.Clamp(_pitch - delta.y * 0.15f, 15f, 75f);
             }
 
-            _distance = Mathf.Clamp(_distance - Input.mouseScrollDelta.y, 4f, 18f);
+            if (mouse != null)
+            {
+                _distance = Mathf.Clamp(_distance - mouse.scroll.ReadValue().y / 120f, 4f, 18f);
+            }
             Quaternion rotation = Quaternion.Euler(_pitch, _yaw, 0f);
             Vector3 focus = _target.position + Vector3.up * 1.25f;
             Vector3 desired = focus - rotation * Vector3.forward * _distance;
