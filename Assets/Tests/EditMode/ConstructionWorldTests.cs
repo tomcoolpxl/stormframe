@@ -77,5 +77,16 @@ namespace Stormframe.Tests
             Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.zero, 0), Is.False);
             Assert.That(ConstructionGrid.CellToWorld(Vector3Int.up).y, Is.EqualTo(1f));
         }
+
+        [Test]
+        public void GetConnectedPieces_ReturnsTouchingComponentOnly()
+        {
+            var world = new ConstructionWorld();
+            world.TryPlace(PieceKind.Cube, Vector3Int.zero, 0, out PlacedPiece first);
+            world.TryPlace(PieceKind.Cube, Vector3Int.right, 0, out _);
+            world.TryPlace(PieceKind.Cube, Vector3Int.right * 5, 0, out _);
+
+            Assert.That(world.GetConnectedPieces(first.Id), Has.Count.EqualTo(2));
+        }
     }
 }

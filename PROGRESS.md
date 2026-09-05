@@ -4,7 +4,7 @@
 
 The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It currently includes third-person robot movement, F1/F2 construction cameras, grid-snapped building, ten modular pieces, rotation, continuous row placement, deletion, piece picking, undo/redo, and construction save/load. The preferred visual direction is modular with visible seams and no connector knobs.
 
-Latest validated baseline: 12 automated tests pass and the Windows player builds successfully.
+Latest validated baseline: 16 automated tests pass and the Windows player builds successfully.
 
 ## Hard Development Rules
 
@@ -22,15 +22,22 @@ Latest validated baseline: 12 automated tests pass and the Windows player builds
 - Do not restore the removed crash-site decoration.
 - Holding and dragging the left mouse button should place continuous rows.
 
-## Active Bundle
+## Completed Bundles
 
-Finish the construction-toy milestone with player-created reusable assemblies:
+- Unity foundation, Input System movement, and five camera experiments.
+- Ten-piece construction palette with half-height vertical snapping.
+- Modular no-knob visuals and a closed slope mesh.
+- Continuous row placement, picking, delete, undo/redo, and save/load.
+- Player-created reusable assemblies:
+  - `B` captures the connected component containing the pointed piece.
+  - The captured group receives a full green/red placement preview.
+  - `R` rotates the group and left-click stamps it repeatedly.
+  - Each stamp validates and undoes/redoes as one atomic command.
 
-1. Capture a connected group of placed pieces relative to a pointed anchor.
-2. Preview and stamp the captured assembly as one validated operation.
-3. Undo or redo the entire stamped assembly in one step.
-4. Add controls, status feedback, tests, and save-compatible logical behavior.
+## Active Gate
+
+Playtest reusable assemblies in the prototype scene. Confirm that capture scope, anchor choice, rotation, preview readability, and repeated stamping feel natural.
 
 ## After This Bundle
 
-Playtest reusable assemblies. If building remains enjoyable, begin the structural prototype: connection graph, support visualization, predictable failure, and temporary debris physics.
+If assembly building feels good, begin the structural prototype as one bundle: support calculation, structural visualization, predictable failure, and temporary debris physics.

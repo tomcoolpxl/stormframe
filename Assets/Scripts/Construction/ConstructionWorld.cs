@@ -81,6 +81,44 @@ namespace Stormframe.Construction
             return true;
         }
 
+        public IReadOnlyList<PlacedPiece> GetConnectedPieces(Guid startingId)
+        {
+            var connected = new List<PlacedPiece>();
+            if (!_pieces.ContainsKey(startingId)) return connected;
+
+            var pending = new Queue<Guid>();
+            var visited = new HashSet<Guid> { startingId };
+            pending.Enqueue(startingId);
+            Vector3Int[] directions =
+            {
+                Vector3Int.left, Vector3Int.right, Vector3Int.down,
+                Vector3Int.up, Vector3Int.back, Vector3Int.forward
+            };
+
+            while (pending.Count > 0)
+            {
+                Guid id = pending.Dequeue();
+                PlacedPiece piece = _pieces[id];
+                connected.Add(piece);
+                foreach (Vector3Int cell in PieceGeometry.OccupiedCells(
+                             piece.Kind,
+                             piece.Anchor,
+                             piece.QuarterTurns))
+                {
+                    foreach (Vector3Int direction in directions)
+                    {
+                        if (_occupancy.TryGetValue(cell + direction, out Guid neighborId)
+                            && visited.Add(neighborId))
+                        {
+                            pending.Enqueue(neighborId);
+                        }
+                    }
+                }
+            }
+
+            return connected;
+        }
+
         public void Clear()
         {
             _pieces.Clear();

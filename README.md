@@ -17,11 +17,13 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 - `F1`–`F5`: close, medium, high, building-orbit, or isometric camera
 - `1`–`4`: cube, beam, plate, or slope
 - `5`–`0`: half block, long block, pillar, wall panel, cylinder, or rod
-- `R`: rotate the selected piece
+- `R`: rotate the selected piece or captured assembly
 - `V`: cycle modular (seamed), natural, and blockout visual treatments
 - Hold left mouse and drag: place continuous rows
 - Right click: delete
 - `C`: pick the pointed-at piece type and rotation
+- `B`: capture every piece connected to the pointed piece as a reusable assembly
+- `Esc`: leave assembly placement mode
 - `Ctrl+Z` / `Ctrl+Y`: undo / redo
 - `Ctrl+S` / `Ctrl+L`: save / load construction
 
@@ -32,4 +34,4 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 ./scripts/Build.ps1
 ```
 
-Build output is written to `Builds/Windows/Stormframe.exe`. See `PLAN.md` for design decisions and milestone gates.
+Build output is written to `Builds/Windows/Stormframe.exe`. See `PROGRESS.md` for the live checkpoint and `PLAN.md` for long-term design decisions.

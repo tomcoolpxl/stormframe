@@ -14,9 +14,11 @@ namespace Stormframe.Construction
         private readonly ConstructionCommandHistory _history = new();
         private readonly Dictionary<System.Guid, GameObject> _views = new();
         private readonly HashSet<Vector3Int> _placementStrokeCells = new();
+        private readonly List<GameObject> _assemblyGhosts = new();
         private Camera _camera;
         private ThirdPersonCamera _thirdPersonCamera;
         private GameObject _ghost;
+        private ConstructionAssembly _assembly;
         private PieceKind _selectedKind;
         private ConstructionVisualStyle _visualStyle = ConstructionVisualStyle.Modular;
         private Vector3Int _candidateCell;
@@ -47,6 +49,13 @@ namespace Stormframe.Construction
             if (Keyboard.current.vKey.wasPressedThisFrame)
             {
                 CycleVisualStyle();
+            }
+
+            if (Keyboard.current.escapeKey.wasPressedThisFrame && _assembly != null)
+            {
+                _assembly = null;
+                RebuildGhost();
+                _status = "Assembly mode cancelled";
             }
 
             if (Mouse.current.leftButton.wasReleasedThisFrame)
@@ -97,6 +106,10 @@ namespace Stormframe.Construction
             {
                 PickPointedPiece();
             }
+            else if (keyboard.bKey.wasPressedThisFrame)
+            {
+                CapturePointedAssembly();
+            }
         }
 
         private void ReadSelection()
@@ -112,7 +125,11 @@ namespace Stormframe.Construction
             if (Keyboard.current.digit8Key.wasPressedThisFrame) _selectedKind = PieceKind.WallPanel;
             if (Keyboard.current.digit9Key.wasPressedThisFrame) _selectedKind = PieceKind.Cylinder;
             if (Keyboard.current.digit0Key.wasPressedThisFrame) _selectedKind = PieceKind.Rod;
-            if (previous != _selectedKind) RebuildGhost();
+            if (previous != _selectedKind)
+            {
+                _assembly = null;
+                RebuildGhost();
+            }
         }
 
         private void UpdateCandidate()
@@ -121,10 +138,18 @@ namespace Stormframe.Construction
             if (!_hasCandidate)
             {
                 if (_ghost != null) _ghost.SetActive(false);
+                foreach (GameObject assemblyGhost in _assemblyGhosts) assemblyGhost.SetActive(false);
                 return;
             }
 
             _candidateCell = ConstructionGrid.SurfaceToCell(hit.point, hit.normal);
+
+            if (_assembly != null)
+            {
+                UpdateAssemblyGhosts();
+                _thirdPersonCamera?.SetBuildingFocus(ConstructionGrid.CellToWorld(_candidateCell));
+                return;
+            }
 
             if (_ghost == null) RebuildGhost();
             _ghost.SetActive(true);
@@ -139,15 +164,18 @@ namespace Stormframe.Construction
 
         private void PlaceCandidate()
         {
-            if (!_history.Execute(
-                    new PlacePieceCommand(_selectedKind, _candidateCell, _quarterTurns),
-                    _world))
+            IConstructionCommand command = _assembly == null
+                ? new PlacePieceCommand(_selectedKind, _candidateCell, _quarterTurns)
+                : new PlaceAssemblyCommand(_assembly, _candidateCell, _quarterTurns);
+            if (!_history.Execute(command, _world))
             {
                 return;
             }
 
             RebuildViews();
-            _status = $"Placed {_selectedKind}";
+            _status = _assembly == null
+                ? $"Placed {_selectedKind}"
+                : $"Stamped assembly ({_assembly.PieceCount} pieces)";
         }
 
         private void RemovePointedPiece()
@@ -168,8 +196,49 @@ namespace Stormframe.Construction
         private void RebuildGhost()
         {
             if (_ghost != null) Destroy(_ghost);
+            _ghost = null;
+            foreach (GameObject assemblyGhost in _assemblyGhosts) Destroy(assemblyGhost);
+            _assemblyGhosts.Clear();
+
+            if (_assembly != null)
+            {
+                UpdateAssemblyGhosts();
+                return;
+            }
+
             var preview = new PlacedPiece(System.Guid.Empty, _selectedKind, _candidateCell, _quarterTurns);
             _ghost = PieceViewFactory.Create(preview, true, _visualStyle);
+        }
+
+        private void UpdateAssemblyGhosts()
+        {
+            IReadOnlyList<AssemblyPlacement> placements = _assembly.GetPlacements(_candidateCell, _quarterTurns);
+            if (_assemblyGhosts.Count != placements.Count)
+            {
+                foreach (GameObject assemblyGhost in _assemblyGhosts) Destroy(assemblyGhost);
+                _assemblyGhosts.Clear();
+                foreach (AssemblyPlacement placement in placements)
+                {
+                    var preview = new PlacedPiece(
+                        System.Guid.Empty,
+                        placement.Kind,
+                        placement.Anchor,
+                        placement.QuarterTurns);
+                    _assemblyGhosts.Add(PieceViewFactory.Create(preview, true, _visualStyle));
+                }
+            }
+
+            bool valid = _assembly.CanPlace(_world, _candidateCell, _quarterTurns);
+            for (int index = 0; index < placements.Count; index++)
+            {
+                AssemblyPlacement placement = placements[index];
+                GameObject assemblyGhost = _assemblyGhosts[index];
+                assemblyGhost.SetActive(true);
+                assemblyGhost.transform.position = ConstructionGrid.CellToWorld(placement.Anchor)
+                    + PieceGeometry.VisualOffset(placement.Kind, placement.QuarterTurns);
+                assemblyGhost.transform.rotation = Quaternion.Euler(0f, placement.QuarterTurns * 90f, 0f);
+                assemblyGhost.GetComponent<PieceVisual>().SetPlacementValidity(valid);
+            }
         }
 
         private void CycleVisualStyle()
@@ -181,6 +250,10 @@ namespace Stormframe.Construction
             }
 
             if (_ghost != null) _ghost.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
+            foreach (GameObject assemblyGhost in _assemblyGhosts)
+            {
+                assemblyGhost.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
+            }
         }
 
         private void PickPointedPiece()
@@ -193,10 +266,26 @@ namespace Stormframe.Construction
                 if (piece.Id != view.PieceId) continue;
                 _selectedKind = piece.Kind;
                 _quarterTurns = piece.QuarterTurns;
+                _assembly = null;
                 RebuildGhost();
                 _status = $"Picked {piece.Kind}";
                 return;
             }
+        }
+
+        private void CapturePointedAssembly()
+        {
+            if (!TryRaycast(out RaycastHit hit)) return;
+            PlacedPieceView view = hit.collider.GetComponentInParent<PlacedPieceView>();
+            if (view == null) return;
+            IReadOnlyList<PlacedPiece> connected = _world.GetConnectedPieces(view.PieceId);
+            if (connected.Count == 0) return;
+
+            _assembly = new ConstructionAssembly(connected, view.Anchor);
+            _quarterTurns = 0;
+            _placementStrokeCells.Clear();
+            RebuildGhost();
+            _status = $"Captured connected assembly ({_assembly.PieceCount} pieces)";
         }
 
         private void RebuildViews()
@@ -238,7 +327,7 @@ namespace Stormframe.Construction
 
         private void OnGUI()
         {
-            GUI.Box(new Rect(16, 16, 510, 208), "Stormframe: Stranded Robot Prototype");
+            GUI.Box(new Rect(16, 16, 540, 228), "Stormframe: Stranded Robot Prototype");
             GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 470, 22), "5 Half | 6 Long | 7 Pillar | 8 Wall | 9 Cylinder | 0 Rod");
@@ -246,7 +335,9 @@ namespace Stormframe.Construction
             GUI.Label(new Rect(28, 122, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
             GUI.Label(new Rect(28, 142, 375, 22), $"V visual style: {_visualStyle}");
             GUI.Label(new Rect(28, 162, 460, 22), "C pick | Ctrl+Z undo | Ctrl+Y redo | Ctrl+S/L save/load");
-            GUI.Label(new Rect(28, 182, 460, 22), $"Selected: {_selectedKind} | {_status}");
+            GUI.Label(new Rect(28, 182, 510, 22), "B capture connected assembly | R rotate | Esc cancel assembly");
+            string selection = _assembly == null ? _selectedKind.ToString() : $"Assembly x{_assembly.PieceCount}";
+            GUI.Label(new Rect(28, 202, 510, 22), $"Selected: {selection} | {_status}");
         }
     }
 }
