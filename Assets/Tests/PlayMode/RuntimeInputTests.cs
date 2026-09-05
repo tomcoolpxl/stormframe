@@ -32,5 +32,24 @@ namespace Stormframe.Tests
             Object.Destroy(cameraObject);
             Object.Destroy(playerObject);
         }
+
+        [UnityTest]
+        public IEnumerator ThirdPersonCamera_WhenIsometricSelected_UsesOrthographicLens()
+        {
+            var targetObject = new GameObject("Test Target");
+            var cameraObject = new GameObject("Test Camera");
+            Camera camera = cameraObject.AddComponent<Camera>();
+            ThirdPersonCamera cameraController = cameraObject.AddComponent<ThirdPersonCamera>();
+            cameraController.SetTarget(targetObject.transform);
+
+            cameraController.SetMode(CameraMode.Isometric);
+
+            Assert.That(cameraController.Mode, Is.EqualTo(CameraMode.Isometric));
+            Assert.That(camera.orthographic, Is.True);
+
+            Object.Destroy(cameraObject);
+            Object.Destroy(targetObject);
+            yield return null;
+        }
     }
 }

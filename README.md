@@ -14,6 +14,7 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 - `WASD`: move
 - Middle mouse drag: orbit camera
 - Mouse wheel: zoom
+- `F1`–`F5`: close, medium, high, building-orbit, or isometric camera
 - `1`–`4`: select cube, beam, plate, or slope
 - `R`: rotate the selected piece
 - Left click: place

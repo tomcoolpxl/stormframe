@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Stormframe.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,7 @@ namespace Stormframe.Construction
         private readonly ConstructionWorld _world = new();
         private readonly Dictionary<System.Guid, GameObject> _views = new();
         private Camera _camera;
+        private ThirdPersonCamera _thirdPersonCamera;
         private GameObject _ghost;
         private PieceKind _selectedKind;
         private Vector3Int _candidateCell;
@@ -18,6 +20,7 @@ namespace Stormframe.Construction
         private void Awake()
         {
             _camera = Camera.main;
+            _thirdPersonCamera = _camera.GetComponent<ThirdPersonCamera>();
         }
 
         private void Update()
@@ -80,6 +83,7 @@ namespace Stormframe.Construction
             _ghost.transform.position = ConstructionGrid.CellToWorld(_candidateCell)
                 + PieceGeometry.VisualOffset(_selectedKind);
             _ghost.transform.rotation = Quaternion.Euler(0f, _quarterTurns * 90f, 0f);
+            _thirdPersonCamera?.SetBuildingFocus(_ghost.transform.position);
 
             bool valid = _world.CanPlace(_selectedKind, _candidateCell, _quarterTurns);
             _ghost.GetComponent<Renderer>().sharedMaterial.color = valid
@@ -120,10 +124,11 @@ namespace Stormframe.Construction
 
         private void OnGUI()
         {
-            GUI.Box(new Rect(16, 16, 330, 88), "Stormframe Construction Prototype");
+            GUI.Box(new Rect(16, 16, 380, 108), "Stormframe Construction Prototype");
             GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 310, 22), $"Left place | Right delete | Pieces: {_world.PieceCount}");
+            GUI.Label(new Rect(28, 102, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
         }
     }
 }
