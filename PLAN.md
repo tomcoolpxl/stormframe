@@ -2042,6 +2042,8 @@ Music comes later.
 
 Save/load should be introduced relatively early.
 
+During development, save formats are disposable. Do not add migrations, compatibility shims, or legacy-format readers. When the schema changes, increment its version and reject older saves.
+
 Do not serialize arbitrary Unity object graphs as the long-term save format.
 
 Prefer logical data.

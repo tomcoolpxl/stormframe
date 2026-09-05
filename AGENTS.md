@@ -23,6 +23,8 @@ Use four-space indentation in C#. Name types and public members with `PascalCase
 
 Keep authoritative simulation state separate from `GameObject` presentation. Prefer explicit, serializable configuration, stable entity identifiers, command-based mutations, and event-driven updates. Avoid important behavior hidden in Inspector-only values or scattered `MonoBehaviour.Update()` methods.
 
+Development save formats are disposable. Never add migrations or backward-compatibility shims; increment the schema version and reject old saves after breaking changes.
+
 ## Testing Guidelines
 
 Use Unity Test Framework tests. Put deterministic simulation and validation tests in Edit Mode; reserve Play Mode for scene, input, physics, and presentation integration. Name fixtures `*Tests.cs` and tests by behavior, such as `PlacePiece_RejectsUnsupportedConnection`. Each milestone must test its design question, not merely feature completion. The first construction prototype should also sanity-check 1,000+ visible pieces.
