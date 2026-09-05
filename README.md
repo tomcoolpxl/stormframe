@@ -15,10 +15,11 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 - Middle mouse drag: orbit camera
 - Mouse wheel: zoom
 - `F1`–`F5`: close, medium, high, building-orbit, or isometric camera
-- `1`–`4`: select cube, beam, plate, or slope
+- `1`–`4`: cube, beam, plate, or slope
+- `5`–`0`: half block, long block, pillar, wall panel, cylinder, or rod
 - `R`: rotate the selected piece
 - `V`: cycle modular (seamed), natural, and blockout visual treatments
-- Left click: place
+- Hold left mouse and drag: place continuous rows
 - Right click: delete
 - `C`: pick the pointed-at piece type and rotation
 - `Ctrl+Z` / `Ctrl+Y`: undo / redo

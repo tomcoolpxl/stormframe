@@ -7,7 +7,7 @@ namespace Stormframe.Construction.Persistence
 {
     public static class ConstructionSaveSerializer
     {
-        private const int CurrentVersion = 1;
+        private const int CurrentVersion = 2;
 
         public static string Serialize(ConstructionWorld world)
         {
@@ -42,7 +42,7 @@ namespace Stormframe.Construction.Persistence
                 return false;
             }
 
-            if (data == null || data.version != CurrentVersion || data.pieces == null)
+            if (data == null || data.version < 1 || data.version > CurrentVersion || data.pieces == null)
             {
                 error = "Unsupported or incomplete construction save.";
                 return false;
@@ -51,12 +51,13 @@ namespace Stormframe.Construction.Persistence
             var restored = new ConstructionWorld();
             foreach (PieceSaveData savedPiece in data.pieces)
             {
+                int migratedY = data.version == 1 ? savedPiece.y * 2 : savedPiece.y;
                 if (!Guid.TryParseExact(savedPiece.id, "N", out Guid id)
                     || !Enum.IsDefined(typeof(PieceKind), savedPiece.kind)
                     || !restored.TryPlace(
                         id,
                         (PieceKind)savedPiece.kind,
-                        new Vector3Int(savedPiece.x, savedPiece.y, savedPiece.z),
+                        new Vector3Int(savedPiece.x, migratedY, savedPiece.z),
                         savedPiece.quarterTurns,
                         out _))
                 {

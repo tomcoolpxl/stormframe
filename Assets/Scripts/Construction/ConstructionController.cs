@@ -13,6 +13,7 @@ namespace Stormframe.Construction
         private readonly ConstructionWorld _world = new();
         private readonly ConstructionCommandHistory _history = new();
         private readonly Dictionary<System.Guid, GameObject> _views = new();
+        private readonly HashSet<Vector3Int> _placementStrokeCells = new();
         private Camera _camera;
         private ThirdPersonCamera _thirdPersonCamera;
         private GameObject _ghost;
@@ -48,7 +49,17 @@ namespace Stormframe.Construction
                 CycleVisualStyle();
             }
 
-            if (_hasCandidate && Mouse.current.leftButton.wasPressedThisFrame)
+            if (Mouse.current.leftButton.wasReleasedThisFrame)
+            {
+                _placementStrokeCells.Clear();
+            }
+
+            bool extendingPlacementStroke = Mouse.current.leftButton.wasPressedThisFrame
+                || Mouse.current.delta.ReadValue().sqrMagnitude >= 1f;
+            if (_hasCandidate
+                && Mouse.current.leftButton.isPressed
+                && extendingPlacementStroke
+                && _placementStrokeCells.Add(_candidateCell))
             {
                 PlaceCandidate();
             }
@@ -95,6 +106,12 @@ namespace Stormframe.Construction
             if (Keyboard.current.digit2Key.wasPressedThisFrame) _selectedKind = PieceKind.Beam;
             if (Keyboard.current.digit3Key.wasPressedThisFrame) _selectedKind = PieceKind.Plate;
             if (Keyboard.current.digit4Key.wasPressedThisFrame) _selectedKind = PieceKind.Slope;
+            if (Keyboard.current.digit5Key.wasPressedThisFrame) _selectedKind = PieceKind.HalfBlock;
+            if (Keyboard.current.digit6Key.wasPressedThisFrame) _selectedKind = PieceKind.LongBlock;
+            if (Keyboard.current.digit7Key.wasPressedThisFrame) _selectedKind = PieceKind.Pillar;
+            if (Keyboard.current.digit8Key.wasPressedThisFrame) _selectedKind = PieceKind.WallPanel;
+            if (Keyboard.current.digit9Key.wasPressedThisFrame) _selectedKind = PieceKind.Cylinder;
+            if (Keyboard.current.digit0Key.wasPressedThisFrame) _selectedKind = PieceKind.Rod;
             if (previous != _selectedKind) RebuildGhost();
         }
 
@@ -107,22 +124,12 @@ namespace Stormframe.Construction
                 return;
             }
 
-            PlacedPieceView pieceView = hit.collider.GetComponentInParent<PlacedPieceView>();
-            if (pieceView != null && Mathf.Abs(hit.normal.y) > 0.5f)
-            {
-                int direction = hit.normal.y > 0f ? 1 : -1;
-                _candidateCell = ConstructionGrid.WorldToCell(hit.point);
-                _candidateCell.y = pieceView.Anchor.y + direction;
-            }
-            else
-            {
-                _candidateCell = ConstructionGrid.WorldToCell(hit.point + hit.normal * 0.05f);
-            }
+            _candidateCell = ConstructionGrid.SurfaceToCell(hit.point, hit.normal);
 
             if (_ghost == null) RebuildGhost();
             _ghost.SetActive(true);
             _ghost.transform.position = ConstructionGrid.CellToWorld(_candidateCell)
-                + PieceGeometry.VisualOffset(_selectedKind);
+                + PieceGeometry.VisualOffset(_selectedKind, _quarterTurns);
             _ghost.transform.rotation = Quaternion.Euler(0f, _quarterTurns * 90f, 0f);
             _thirdPersonCamera?.SetBuildingFocus(_ghost.transform.position);
 
@@ -231,14 +238,15 @@ namespace Stormframe.Construction
 
         private void OnGUI()
         {
-            GUI.Box(new Rect(16, 16, 430, 168), "Stormframe: Stranded Robot Prototype");
+            GUI.Box(new Rect(16, 16, 510, 208), "Stormframe: Stranded Robot Prototype");
             GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
-            GUI.Label(new Rect(28, 82, 310, 22), $"Left place | Right delete | Pieces: {_world.PieceCount}");
-            GUI.Label(new Rect(28, 102, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
-            GUI.Label(new Rect(28, 122, 375, 22), $"V visual style: {_visualStyle}");
-            GUI.Label(new Rect(28, 142, 395, 22), "C pick | Ctrl+Z undo | Ctrl+Y redo | Ctrl+S/L save/load");
-            GUI.Label(new Rect(28, 162, 395, 22), $"Selected: {_selectedKind} | {_status}");
+            GUI.Label(new Rect(28, 82, 470, 22), "5 Half | 6 Long | 7 Pillar | 8 Wall | 9 Cylinder | 0 Rod");
+            GUI.Label(new Rect(28, 102, 460, 22), $"Hold left + drag to place | Right delete | Pieces: {_world.PieceCount}");
+            GUI.Label(new Rect(28, 122, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
+            GUI.Label(new Rect(28, 142, 375, 22), $"V visual style: {_visualStyle}");
+            GUI.Label(new Rect(28, 162, 460, 22), "C pick | Ctrl+Z undo | Ctrl+Y redo | Ctrl+S/L save/load");
+            GUI.Label(new Rect(28, 182, 460, 22), $"Selected: {_selectedKind} | {_status}");
         }
     }
 }

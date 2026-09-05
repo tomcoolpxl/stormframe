@@ -5,6 +5,12 @@ namespace Stormframe.Construction
         Cube,
         Beam,
         Plate,
-        Slope
+        Slope,
+        HalfBlock,
+        LongBlock,
+        Pillar,
+        WallPanel,
+        Cylinder,
+        Rod
     }
 }

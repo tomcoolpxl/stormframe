@@ -12,7 +12,7 @@ namespace Stormframe.Construction
             var view = new GameObject();
             view.name = ghost ? $"Ghost {piece.Kind}" : $"{piece.Kind} {piece.Id:N}";
             view.transform.position = ConstructionGrid.CellToWorld(piece.Anchor)
-                + PieceGeometry.VisualOffset(piece.Kind);
+                + PieceGeometry.VisualOffset(piece.Kind, piece.QuarterTurns);
             view.transform.rotation = Quaternion.Euler(0f, piece.QuarterTurns * 90f, 0f);
 
             Mesh slopeMesh = piece.Kind == PieceKind.Slope ? CreateSlopeMesh() : null;
@@ -21,7 +21,7 @@ namespace Stormframe.Construction
             geometry.transform.SetParent(view.transform, false);
             Vector3 baseScale = ScaleFor(piece.Kind);
 
-            AddCollider(view, piece.Kind, baseScale, slopeMesh);
+            AddCollider(view, piece.Kind, ColliderSizeFor(piece.Kind), slopeMesh);
             var visual = view.AddComponent<PieceVisual>();
             visual.Initialize(
                 piece.Kind,
@@ -51,9 +51,12 @@ namespace Stormframe.Construction
         {
             if (kind != PieceKind.Slope)
             {
-                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                DestroyObject(cube.GetComponent<Collider>());
-                return cube;
+                PrimitiveType primitive = kind == PieceKind.Cylinder || kind == PieceKind.Rod
+                    ? PrimitiveType.Cylinder
+                    : PrimitiveType.Cube;
+                GameObject geometry = GameObject.CreatePrimitive(primitive);
+                DestroyObject(geometry.GetComponent<Collider>());
+                return geometry;
             }
 
             var slope = new GameObject();
@@ -83,7 +86,23 @@ namespace Stormframe.Construction
             {
                 PieceKind.Beam => new Vector3(3f, 1f, 1f),
                 PieceKind.Plate => new Vector3(2f, 0.25f, 2f),
+                PieceKind.HalfBlock => new Vector3(1f, 0.5f, 1f),
+                PieceKind.LongBlock => new Vector3(2f, 1f, 1f),
+                PieceKind.Pillar => new Vector3(1f, 2f, 1f),
+                PieceKind.WallPanel => new Vector3(2f, 2f, 0.25f),
+                PieceKind.Cylinder => new Vector3(0.45f, 0.5f, 0.45f),
+                PieceKind.Rod => new Vector3(0.14f, 1f, 0.14f),
                 _ => Vector3.one
+            };
+        }
+
+        private static Vector3 ColliderSizeFor(PieceKind kind)
+        {
+            return kind switch
+            {
+                PieceKind.Cylinder => new Vector3(0.9f, 1f, 0.9f),
+                PieceKind.Rod => new Vector3(0.28f, 2f, 0.28f),
+                _ => ScaleFor(kind)
             };
         }
 

@@ -44,5 +44,38 @@ namespace Stormframe.Tests
 
             Assert.That(world.CanPlace(PieceKind.Cube, new Vector3Int(0, -1, 0), 0), Is.False);
         }
+
+        [Test]
+        public void WallPanel_OccupiesTwoWideByTwoHigh()
+        {
+            var world = new ConstructionWorld();
+
+            Assert.That(world.TryPlace(PieceKind.WallPanel, Vector3Int.zero, 0, out _), Is.True);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.right, 0), Is.False);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.up, 0), Is.False);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.right + Vector3Int.up, 0), Is.False);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.forward, 0), Is.True);
+        }
+
+        [Test]
+        public void LongBlockRotation_ChangesOccupiedAxis()
+        {
+            var world = new ConstructionWorld();
+
+            Assert.That(world.TryPlace(PieceKind.LongBlock, Vector3Int.zero, 1, out _), Is.True);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.forward, 0), Is.False);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.right, 0), Is.True);
+        }
+
+        [Test]
+        public void HalfBlocks_StackWithinOneWorldUnit()
+        {
+            var world = new ConstructionWorld();
+
+            Assert.That(world.TryPlace(PieceKind.HalfBlock, Vector3Int.zero, 0, out _), Is.True);
+            Assert.That(world.TryPlace(PieceKind.HalfBlock, Vector3Int.up, 0, out _), Is.True);
+            Assert.That(world.CanPlace(PieceKind.Cube, Vector3Int.zero, 0), Is.False);
+            Assert.That(ConstructionGrid.CellToWorld(Vector3Int.up).y, Is.EqualTo(1f));
+        }
     }
 }
