@@ -2494,6 +2494,12 @@ Should players place:
 
 Should pieces visibly remain construction blocks, or should rendering increasingly disguise them as natural building materials?
 
+Current result:
+
+* Keep the modular treatment and visible seams.
+* Do not show stud-like connector knobs on finished pieces.
+* Communicate snapping through the placement preview rather than permanent connector geometry.
+
 ---
 
 # Library gate

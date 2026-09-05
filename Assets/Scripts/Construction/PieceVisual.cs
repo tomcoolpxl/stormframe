@@ -1,11 +1,9 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Stormframe.Construction
 {
     public sealed class PieceVisual : MonoBehaviour
     {
-        private readonly List<GameObject> _connectors = new();
         private PieceKind _kind;
         private bool _ghost;
         private Transform _geometry;
@@ -15,22 +13,18 @@ namespace Stormframe.Construction
         private ConstructionVisualStyle _style;
 
         public ConstructionVisualStyle Style => _style;
-        public int ConnectorCount => _connectors.Count;
-
         public void Initialize(
             PieceKind kind,
             bool ghost,
             Transform geometry,
             Renderer renderer,
-            Vector3 baseScale,
-            IEnumerable<GameObject> connectors)
+            Vector3 baseScale)
         {
             _kind = kind;
             _ghost = ghost;
             _geometry = geometry;
             _renderer = renderer;
             _baseScale = baseScale;
-            _connectors.AddRange(connectors);
             _material = CreateMaterial();
             _renderer.sharedMaterial = _material;
         }
@@ -45,12 +39,6 @@ namespace Stormframe.Construction
                 _ => 0.94f
             };
             _geometry.localScale = _baseScale * seamScale;
-
-            bool showConnectors = style == ConstructionVisualStyle.Modular;
-            foreach (GameObject connector in _connectors)
-            {
-                connector.SetActive(showConnectors);
-            }
 
             if (!_ghost)
             {

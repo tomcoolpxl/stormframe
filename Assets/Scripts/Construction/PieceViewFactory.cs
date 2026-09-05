@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Stormframe.Construction
@@ -23,15 +22,13 @@ namespace Stormframe.Construction
             Vector3 baseScale = ScaleFor(piece.Kind);
 
             AddCollider(view, piece.Kind, baseScale, slopeMesh);
-            List<GameObject> connectors = CreateConnectors(view.transform, piece.Kind);
             var visual = view.AddComponent<PieceVisual>();
             visual.Initialize(
                 piece.Kind,
                 ghost,
                 geometry.transform,
                 geometry.GetComponent<Renderer>(),
-                baseScale,
-                connectors);
+                baseScale);
             visual.ApplyStyle(style);
 
             if (ghost)
@@ -88,44 +85,6 @@ namespace Stormframe.Construction
                 PieceKind.Plate => new Vector3(2f, 0.25f, 2f),
                 _ => Vector3.one
             };
-        }
-
-        private static List<GameObject> CreateConnectors(Transform parent, PieceKind kind)
-        {
-            var connectors = new List<GameObject>();
-            Vector3[] positions = kind switch
-            {
-                PieceKind.Beam => new[]
-                {
-                    new Vector3(-1f, 0.51f, 0f), Vector3.up * 0.51f, new Vector3(1f, 0.51f, 0f)
-                },
-                PieceKind.Plate => new[]
-                {
-                    new Vector3(-0.5f, 0.14f, -0.5f), new Vector3(0.5f, 0.14f, -0.5f),
-                    new Vector3(-0.5f, 0.14f, 0.5f), new Vector3(0.5f, 0.14f, 0.5f)
-                },
-                PieceKind.Slope => new[] { new Vector3(0f, 0.51f, 0.35f) },
-                _ => new[] { Vector3.up * 0.51f }
-            };
-
-            var connectorMaterial = new Material(Shader.Find("Standard"))
-            {
-                color = new Color(0.82f, 0.88f, 0.9f),
-                name = "Connector Indicator"
-            };
-            foreach (Vector3 position in positions)
-            {
-                GameObject connector = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                connector.name = "Connection Indicator";
-                connector.transform.SetParent(parent, false);
-                connector.transform.localPosition = position;
-                connector.transform.localScale = new Vector3(0.13f, 0.035f, 0.13f);
-                DestroyObject(connector.GetComponent<Collider>());
-                connector.GetComponent<Renderer>().sharedMaterial = connectorMaterial;
-                connectors.Add(connector);
-            }
-
-            return connectors;
         }
 
         private static void DestroyObject(Object target)
