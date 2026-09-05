@@ -25,6 +25,7 @@ namespace Stormframe.Editor
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             PlayerSettings.companyName = "Stormframe";
             PlayerSettings.productName = "Stormframe Prototype";
             Selection.activeGameObject = player;
