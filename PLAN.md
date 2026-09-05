@@ -78,6 +78,20 @@ automate using nature
 
 Enemies may eventually exist, but enemies and combat are deliberately not part of the early design.
 
+## Working theme
+
+The player is a small robot stranded on the island. This adds a restrained science-fiction layer without replacing the natural setting.
+
+The working contrast is:
+
+```text
+ancient, irregular nature
+        versus
+precise, improvised machine technology
+```
+
+Construction, repair, power, automation, and learning to harness weather all fit this fantasy. The robot's origin, the cause of the crash, and any larger story remain deliberately open.
+
 ---
 
 # Platform priorities
@@ -886,23 +900,23 @@ sphere
 simple floating geometric object
 ```
 
-Possible eventual direction:
+Current working direction:
 
-**small non-humanoid guardian spirit**
+**small stranded non-humanoid robot**
 
 Possible characteristics:
 
 * central body
-* floating fragments
-* hovering motion
-* light source or glow
+* compact geometric body
+* hovering or mechanical motion
+* scanner light or glow
 * no legs
 * minimal or no skeletal animation
 * procedural movement
 * building effects
 * carried items floating nearby
 
-The character design remains open.
+The exact character design remains open, but the robot fantasy is now the baseline.
 
 ---
 

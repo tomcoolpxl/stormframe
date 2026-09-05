@@ -19,6 +19,7 @@ namespace Stormframe.Editor
 
             CreateGround();
             CreateLighting();
+            CreateCrashSite();
             GameObject player = CreatePlayer();
             CreateCamera(player.transform);
             new GameObject("Construction").AddComponent<ConstructionController>();
@@ -59,20 +60,92 @@ namespace Stormframe.Editor
 
         private static GameObject CreatePlayer()
         {
-            GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            player.name = "Placeholder Player";
+            var player = new GameObject("Stranded Robot");
             player.layer = LayerMask.NameToLayer("Ignore Raycast");
             player.transform.position = new Vector3(0f, 1f, -5f);
-            Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
             var controller = player.AddComponent<CharacterController>();
-            controller.height = 2f;
-            controller.radius = 0.45f;
-            controller.center = Vector3.zero;
+            controller.height = 1.65f;
+            controller.radius = 0.5f;
+            controller.center = new Vector3(0f, -0.1f, 0f);
             player.AddComponent<ThirdPersonMotor>();
-            player.GetComponent<Renderer>().sharedMaterial = CreateMaterial(
-                "Player Material",
-                new Color(0.92f, 0.68f, 0.18f));
+
+            var visualRoot = new GameObject("Robot Visual");
+            visualRoot.layer = player.layer;
+            visualRoot.transform.SetParent(player.transform, false);
+            Material shell = CreateMaterial("Robot Shell", new Color(0.12f, 0.16f, 0.19f));
+            Material accent = CreateMaterial("Robot Accent", new Color(0.92f, 0.42f, 0.12f));
+            Material glow = CreateEmissiveMaterial("Robot Glow", new Color(0.1f, 0.85f, 1f));
+
+            CreatePart("Body", PrimitiveType.Sphere, visualRoot.transform, new Vector3(0f, -0.05f, 0f), new Vector3(0.82f, 0.62f, 0.68f), shell);
+            CreatePart("Head", PrimitiveType.Cube, visualRoot.transform, new Vector3(0f, 0.46f, 0.03f), new Vector3(0.68f, 0.42f, 0.54f), shell);
+            CreatePart("Eye", PrimitiveType.Cube, visualRoot.transform, new Vector3(0f, 0.49f, 0.315f), new Vector3(0.38f, 0.09f, 0.035f), glow);
+            CreatePart("Left Stabilizer", PrimitiveType.Sphere, visualRoot.transform, new Vector3(-0.5f, -0.18f, 0f), new Vector3(0.25f, 0.32f, 0.3f), accent);
+            CreatePart("Right Stabilizer", PrimitiveType.Sphere, visualRoot.transform, new Vector3(0.5f, -0.18f, 0f), new Vector3(0.25f, 0.32f, 0.3f), accent);
+            CreatePart("Hover Emitter", PrimitiveType.Cylinder, visualRoot.transform, new Vector3(0f, -0.43f, 0f), new Vector3(0.34f, 0.035f, 0.34f), glow);
+
+            var scanner = new GameObject("Scanner Pivot");
+            scanner.layer = player.layer;
+            scanner.transform.SetParent(visualRoot.transform, false);
+            CreatePart("Scanner Mast", PrimitiveType.Cylinder, scanner.transform, new Vector3(0f, 0.78f, 0f), new Vector3(0.045f, 0.18f, 0.045f), accent);
+            CreatePart("Scanner Tip", PrimitiveType.Sphere, scanner.transform, new Vector3(0.16f, 0.98f, 0f), Vector3.one * 0.12f, glow);
+
+            var eyeLightObject = new GameObject("Eye Light");
+            eyeLightObject.layer = player.layer;
+            eyeLightObject.transform.SetParent(visualRoot.transform, false);
+            eyeLightObject.transform.localPosition = new Vector3(0f, 0.5f, 0.38f);
+            Light eyeLight = eyeLightObject.AddComponent<Light>();
+            eyeLight.type = LightType.Point;
+            eyeLight.color = new Color(0.1f, 0.85f, 1f);
+            eyeLight.range = 3.5f;
+            eyeLight.intensity = 1f;
+
+            player.AddComponent<RobotVisualAnimator>().Configure(visualRoot.transform, scanner.transform, eyeLight);
             return player;
+        }
+
+        private static void CreateCrashSite()
+        {
+            var crashSite = new GameObject("Crash Site");
+            crashSite.transform.position = new Vector3(4f, 0f, -1f);
+            Material hull = CreateMaterial("Crash Hull", new Color(0.1f, 0.12f, 0.14f));
+            Material accent = CreateMaterial("Crash Accent", new Color(0.85f, 0.3f, 0.08f));
+            Material glow = CreateEmissiveMaterial("Beacon Glow", new Color(0.1f, 0.85f, 1f));
+
+            CreatePart("Scorched Ground", PrimitiveType.Cylinder, crashSite.transform, new Vector3(0f, 0.02f, 0f), new Vector3(2.7f, 0.015f, 1.8f), CreateMaterial("Scorch", new Color(0.08f, 0.09f, 0.07f)));
+            GameObject pod = CreatePart("Broken Pod", PrimitiveType.Capsule, crashSite.transform, new Vector3(0f, 0.48f, 0f), new Vector3(0.62f, 1.1f, 0.62f), hull);
+            pod.transform.localRotation = Quaternion.Euler(0f, 0f, 72f);
+            GameObject panel = CreatePart("Broken Panel", PrimitiveType.Cube, crashSite.transform, new Vector3(1.15f, 0.18f, 0.45f), new Vector3(0.9f, 0.08f, 0.55f), accent);
+            panel.transform.localRotation = Quaternion.Euler(8f, 28f, -12f);
+            CreatePart("Beacon Mast", PrimitiveType.Cylinder, crashSite.transform, new Vector3(-0.85f, 0.55f, -0.25f), new Vector3(0.06f, 0.55f, 0.06f), hull);
+            CreatePart("Beacon", PrimitiveType.Sphere, crashSite.transform, new Vector3(-0.85f, 1.12f, -0.25f), Vector3.one * 0.18f, glow);
+
+            var beaconLightObject = new GameObject("Beacon Light");
+            beaconLightObject.transform.SetParent(crashSite.transform, false);
+            beaconLightObject.transform.localPosition = new Vector3(-0.85f, 1.12f, -0.25f);
+            Light beaconLight = beaconLightObject.AddComponent<Light>();
+            beaconLight.type = LightType.Point;
+            beaconLight.color = new Color(0.1f, 0.85f, 1f);
+            beaconLight.range = 5f;
+            beaconLight.intensity = 1.4f;
+        }
+
+        private static GameObject CreatePart(
+            string name,
+            PrimitiveType primitive,
+            Transform parent,
+            Vector3 position,
+            Vector3 scale,
+            Material material)
+        {
+            GameObject part = GameObject.CreatePrimitive(primitive);
+            part.name = name;
+            part.layer = LayerMask.NameToLayer("Ignore Raycast");
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+            Object.DestroyImmediate(part.GetComponent<Collider>());
+            part.GetComponent<Renderer>().sharedMaterial = material;
+            return part;
         }
 
         private static void CreateCamera(Transform target)
@@ -91,6 +164,14 @@ namespace Stormframe.Editor
                 name = name,
                 color = color
             };
+            return material;
+        }
+
+        private static Material CreateEmissiveMaterial(string name, Color color)
+        {
+            Material material = CreateMaterial(name, color);
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", color * 1.8f);
             return material;
         }
 

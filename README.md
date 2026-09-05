@@ -1,6 +1,6 @@
 # Stormframe
 
-Stormframe is an early Unity construction-game prototype. The immediate goal is to prove that placing and combining modular pieces is enjoyable before adding weather, survival, resources, or multiplayer.
+Stormframe is an early Unity construction-game prototype about a small robot stranded on a finite island. The immediate goal is to prove that placing and combining modular pieces is enjoyable before adding weather, survival, resources, or multiplayer.
 
 ## Requirements
 
