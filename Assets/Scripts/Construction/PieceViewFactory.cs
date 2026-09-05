@@ -1,23 +1,38 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Stormframe.Construction
 {
     public static class PieceViewFactory
     {
-        public static GameObject Create(PlacedPiece piece, bool ghost)
+        public static GameObject Create(
+            PlacedPiece piece,
+            bool ghost,
+            ConstructionVisualStyle style = ConstructionVisualStyle.Modular)
         {
-            GameObject view = piece.Kind == PieceKind.Slope
-                ? CreateSlope()
-                : GameObject.CreatePrimitive(PrimitiveType.Cube);
-
+            var view = new GameObject();
             view.name = ghost ? $"Ghost {piece.Kind}" : $"{piece.Kind} {piece.Id:N}";
             view.transform.position = ConstructionGrid.CellToWorld(piece.Anchor)
                 + PieceGeometry.VisualOffset(piece.Kind);
             view.transform.rotation = Quaternion.Euler(0f, piece.QuarterTurns * 90f, 0f);
-            view.transform.localScale = ScaleFor(piece.Kind);
 
-            Renderer renderer = view.GetComponent<Renderer>();
-            renderer.sharedMaterial = CreateMaterial(piece.Kind, ghost);
+            Mesh slopeMesh = piece.Kind == PieceKind.Slope ? CreateSlopeMesh() : null;
+            GameObject geometry = CreateGeometry(piece.Kind, slopeMesh);
+            geometry.name = "Geometry";
+            geometry.transform.SetParent(view.transform, false);
+            Vector3 baseScale = ScaleFor(piece.Kind);
+
+            AddCollider(view, piece.Kind, baseScale, slopeMesh);
+            List<GameObject> connectors = CreateConnectors(view.transform, piece.Kind);
+            var visual = view.AddComponent<PieceVisual>();
+            visual.Initialize(
+                piece.Kind,
+                ghost,
+                geometry.transform,
+                geometry.GetComponent<Renderer>(),
+                baseScale,
+                connectors);
+            visual.ApplyStyle(style);
 
             if (ghost)
             {
@@ -35,6 +50,36 @@ namespace Stormframe.Construction
             return view;
         }
 
+        private static GameObject CreateGeometry(PieceKind kind, Mesh slopeMesh)
+        {
+            if (kind != PieceKind.Slope)
+            {
+                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                DestroyObject(cube.GetComponent<Collider>());
+                return cube;
+            }
+
+            var slope = new GameObject();
+            slope.AddComponent<MeshFilter>().sharedMesh = slopeMesh;
+            slope.AddComponent<MeshRenderer>();
+            return slope;
+        }
+
+        private static void AddCollider(
+            GameObject view,
+            PieceKind kind,
+            Vector3 scale,
+            Mesh slopeMesh)
+        {
+            if (kind == PieceKind.Slope)
+            {
+                view.AddComponent<MeshCollider>().sharedMesh = slopeMesh;
+                return;
+            }
+
+            view.AddComponent<BoxCollider>().size = scale;
+        }
+
         private static Vector3 ScaleFor(PieceKind kind)
         {
             return kind switch
@@ -45,37 +90,58 @@ namespace Stormframe.Construction
             };
         }
 
-        private static Material CreateMaterial(PieceKind kind, bool ghost)
+        private static List<GameObject> CreateConnectors(Transform parent, PieceKind kind)
         {
-            Shader shader = Shader.Find("Standard");
-            var material = new Material(shader);
-            Color color = kind switch
+            var connectors = new List<GameObject>();
+            Vector3[] positions = kind switch
             {
-                PieceKind.Beam => new Color(0.45f, 0.23f, 0.10f),
-                PieceKind.Plate => new Color(0.72f, 0.64f, 0.45f),
-                PieceKind.Slope => new Color(0.35f, 0.48f, 0.60f),
-                _ => new Color(0.68f, 0.34f, 0.16f)
+                PieceKind.Beam => new[]
+                {
+                    new Vector3(-1f, 0.51f, 0f), Vector3.up * 0.51f, new Vector3(1f, 0.51f, 0f)
+                },
+                PieceKind.Plate => new[]
+                {
+                    new Vector3(-0.5f, 0.14f, -0.5f), new Vector3(0.5f, 0.14f, -0.5f),
+                    new Vector3(-0.5f, 0.14f, 0.5f), new Vector3(0.5f, 0.14f, 0.5f)
+                },
+                PieceKind.Slope => new[] { new Vector3(0f, 0.51f, 0.35f) },
+                _ => new[] { Vector3.up * 0.51f }
             };
 
-            if (ghost)
+            var connectorMaterial = new Material(Shader.Find("Standard"))
             {
-                color.a = 0.45f;
-                material.SetFloat("_Mode", 3f);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.renderQueue = 3000;
+                color = new Color(0.82f, 0.88f, 0.9f),
+                name = "Connector Indicator"
+            };
+            foreach (Vector3 position in positions)
+            {
+                GameObject connector = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                connector.name = "Connection Indicator";
+                connector.transform.SetParent(parent, false);
+                connector.transform.localPosition = position;
+                connector.transform.localScale = new Vector3(0.13f, 0.035f, 0.13f);
+                DestroyObject(connector.GetComponent<Collider>());
+                connector.GetComponent<Renderer>().sharedMaterial = connectorMaterial;
+                connectors.Add(connector);
             }
 
-            material.color = color;
-            return material;
+            return connectors;
         }
 
-        private static GameObject CreateSlope()
+        private static void DestroyObject(Object target)
         {
-            var gameObject = new GameObject("Slope");
+            if (Application.isPlaying)
+            {
+                Object.Destroy(target);
+            }
+            else
+            {
+                Object.DestroyImmediate(target);
+            }
+        }
+
+        private static Mesh CreateSlopeMesh()
+        {
             var mesh = new Mesh { name = "Slope Mesh" };
             mesh.vertices = new[]
             {
@@ -85,18 +151,15 @@ namespace Stormframe.Construction
             };
             mesh.triangles = new[]
             {
-                0, 2, 1, 1, 2, 3,
-                2, 4, 3, 3, 4, 5,
-                0, 4, 2, 0, 1, 4,
-                1, 5, 4, 1, 3, 5,
-                0, 5, 1, 0, 4, 5
+                0, 1, 2, 1, 3, 2,
+                2, 3, 4, 3, 5, 4,
+                0, 2, 4,
+                1, 5, 3,
+                0, 4, 1, 1, 4, 5
             };
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
-            gameObject.AddComponent<MeshRenderer>();
-            gameObject.AddComponent<MeshCollider>().sharedMesh = mesh;
-            return gameObject;
+            return mesh;
         }
     }
 }

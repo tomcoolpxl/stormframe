@@ -13,6 +13,7 @@ namespace Stormframe.Construction
         private ThirdPersonCamera _thirdPersonCamera;
         private GameObject _ghost;
         private PieceKind _selectedKind;
+        private ConstructionVisualStyle _visualStyle = ConstructionVisualStyle.Modular;
         private Vector3Int _candidateCell;
         private int _quarterTurns;
         private bool _hasCandidate;
@@ -34,6 +35,11 @@ namespace Stormframe.Construction
             {
                 _quarterTurns = (_quarterTurns + 1) % 4;
                 RebuildGhost();
+            }
+
+            if (Keyboard.current.vKey.wasPressedThisFrame)
+            {
+                CycleVisualStyle();
             }
 
             if (_hasCandidate && Mouse.current.leftButton.wasPressedThisFrame)
@@ -86,9 +92,7 @@ namespace Stormframe.Construction
             _thirdPersonCamera?.SetBuildingFocus(_ghost.transform.position);
 
             bool valid = _world.CanPlace(_selectedKind, _candidateCell, _quarterTurns);
-            _ghost.GetComponent<Renderer>().sharedMaterial.color = valid
-                ? new Color(0.25f, 0.9f, 0.45f, 0.45f)
-                : new Color(0.95f, 0.2f, 0.2f, 0.45f);
+            _ghost.GetComponent<PieceVisual>().SetPlacementValidity(valid);
         }
 
         private void PlaceCandidate()
@@ -98,7 +102,7 @@ namespace Stormframe.Construction
                 return;
             }
 
-            _views.Add(piece.Id, PieceViewFactory.Create(piece, false));
+            _views.Add(piece.Id, PieceViewFactory.Create(piece, false, _visualStyle));
         }
 
         private void RemovePointedPiece()
@@ -119,16 +123,28 @@ namespace Stormframe.Construction
         {
             if (_ghost != null) Destroy(_ghost);
             var preview = new PlacedPiece(System.Guid.Empty, _selectedKind, _candidateCell, _quarterTurns);
-            _ghost = PieceViewFactory.Create(preview, true);
+            _ghost = PieceViewFactory.Create(preview, true, _visualStyle);
+        }
+
+        private void CycleVisualStyle()
+        {
+            _visualStyle = (ConstructionVisualStyle)(((int)_visualStyle + 1) % 3);
+            foreach (GameObject view in _views.Values)
+            {
+                view.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
+            }
+
+            if (_ghost != null) _ghost.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
         }
 
         private void OnGUI()
         {
-            GUI.Box(new Rect(16, 16, 380, 108), "Stormframe Construction Prototype");
+            GUI.Box(new Rect(16, 16, 410, 128), "Stormframe Construction Prototype");
             GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 310, 22), $"Left place | Right delete | Pieces: {_world.PieceCount}");
             GUI.Label(new Rect(28, 102, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
+            GUI.Label(new Rect(28, 122, 375, 22), $"V visual style: {_visualStyle}");
         }
     }
 }

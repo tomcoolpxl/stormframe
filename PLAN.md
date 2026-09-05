@@ -2471,6 +2471,12 @@ Do not migrate based purely on aesthetic preference for Rust.
 
 Can detailed construction be performed comfortably without entering first person?
 
+Current result:
+
+* F2 medium third-person is the default general camera.
+* F1 close third-person is retained for detailed work.
+* F3 high, F4 building orbit, and F5 isometric were less effective and remain experiments rather than primary modes.
+
 ---
 
 # Construction scale gate
