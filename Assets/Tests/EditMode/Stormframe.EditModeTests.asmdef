@@ -1,0 +1,13 @@
+{
+  "name": "Stormframe.EditModeTests",
+  "rootNamespace": "Stormframe.Tests",
+  "references": [
+    "Stormframe.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Stormframe.Editor",
+  "rootNamespace": "Stormframe.Editor",
+  "references": [
+    "Stormframe.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

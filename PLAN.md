@@ -113,7 +113,7 @@ We will begin by making the actual prototype in Unity.
 
 We will not initially duplicate the prototype in Bevy.
 
-Unity 6.3 is the current LTS release and is supported through December 2027, making it a sensible stable baseline for a new project rather than chasing short-lived editor versions.
+The prototype uses Unity 6000.6.0f1, the latest editor selected for this project.
 
 ## Why Unity currently wins
 
@@ -2201,7 +2201,7 @@ The stages below are decision gates rather than promises.
 Deliver:
 
 ```text
-Unity 6.3 LTS project
+Unity 6000.6.0f1 project
 Windows build
 basic scene
 player placeholder
@@ -2813,7 +2813,7 @@ The difficult parts of this project should primarily be things we can program.
 
 The next milestone is deliberately tiny.
 
-Create a Unity 6.3 LTS Windows project containing:
+Create a Unity 6000.6.0f1 Windows project containing:
 
 ```text
 simple terrain

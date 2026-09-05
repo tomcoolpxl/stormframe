@@ -2,20 +2,20 @@
 
 ## Project Structure & Module Organization
 
-This repository is currently in the planning phase. `PLAN.md` is the source of truth for scope, architecture, and milestone order. The first implementation should be a Unity 6.3 LTS project targeting Windows.
+This repository contains a Unity prototype. `PLAN.md` is the source of truth for scope, architecture, and milestone order. Use Unity 6000.6.0f1 and target Windows first.
 
 When adding the Unity project, keep gameplay code under `Assets/Scripts/`, editor automation under `Assets/Editor/`, data definitions under `Assets/Data/`, and tests under `Assets/Tests/EditMode/` or `Assets/Tests/PlayMode/`. Commit `Packages/` and `ProjectSettings/`; do not commit generated directories such as `Library/`, `Temp/`, `Logs/`, or `Builds/`.
 
 ## Build, Test, and Development Commands
 
-There is no build system or executable project yet. In a Git checkout, review documentation changes with:
+Use the repository scripts from PowerShell:
 
 ```powershell
-git diff --check
-git diff -- PLAN.md AGENTS.md
+./scripts/Test.ps1
+./scripts/Build.ps1
 ```
 
-After initialization, open the project with Unity Hub using Unity 6.3 LTS. Run tests through **Window > General > Test Runner**, and create Windows builds through **File > Build Profiles**. Document stable CI or command-line equivalents here when they are introduced; do not assume local Unity paths.
+The first command runs Edit Mode tests and writes `TestResults.xml`. The second creates `Builds/Windows/Stormframe.exe`. Both resolve the editor version from `ProjectSettings/ProjectVersion.txt`. For interactive work, add this directory in Unity Hub.
 
 ## Coding Style & Naming Conventions
 
