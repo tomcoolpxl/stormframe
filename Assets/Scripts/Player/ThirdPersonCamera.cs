@@ -12,26 +12,41 @@ namespace Stormframe.Player
         [SerializeField] private float _pitch = 35f;
         [SerializeField] private float _collisionRadius = 0.25f;
         [SerializeField] private float _focusSmoothTime = 0.12f;
+        [SerializeField] private float _collisionSmoothTime = 0.08f;
         private Camera _camera;
         private CameraMode _mode = CameraMode.Medium;
         private Vector3 _buildingFocus;
         private Vector3 _smoothedFocus;
         private Vector3 _focusVelocity;
+        private float _collisionDistance;
+        private float _collisionVelocity;
         private bool _hasBuildingFocus;
 
         public CameraMode Mode => _mode;
+        public Vector3 IntendedFocus => UsesBuildingFocus && _hasBuildingFocus
+            ? _buildingFocus
+            : NormalFocus;
 
         public void SetTarget(Transform target)
         {
             _target = target;
             _smoothedFocus = NormalFocus;
+            _collisionDistance = _distance;
         }
 
         public void SetBuildingFocus(Vector3 worldPosition)
         {
             if (_target == null || Vector3.Distance(_target.position, worldPosition) > 24f) return;
-            _buildingFocus = worldPosition + Vector3.up * 0.5f;
+            Vector3 playerFocus = NormalFocus;
+            Vector3 requestedFocus = worldPosition + Vector3.up * 0.5f;
+            Vector3 midpointOffset = (requestedFocus - playerFocus) * 0.5f;
+            _buildingFocus = playerFocus + Vector3.ClampMagnitude(midpointOffset, 4f);
             _hasBuildingFocus = true;
+        }
+
+        public void ClearBuildingFocus()
+        {
+            _hasBuildingFocus = false;
         }
 
         private Vector3 NormalFocus => _target.position + Vector3.up * 1.25f;
@@ -67,9 +82,7 @@ namespace Stormframe.Player
                 }
             }
 
-            Vector3 targetFocus = UsesBuildingFocus && _hasBuildingFocus
-                ? _buildingFocus
-                : NormalFocus;
+            Vector3 targetFocus = IntendedFocus;
             _smoothedFocus = Vector3.SmoothDamp(
                 _smoothedFocus,
                 targetFocus,
@@ -78,7 +91,7 @@ namespace Stormframe.Player
 
             Quaternion rotation = Quaternion.Euler(_pitch, _yaw, 0f);
             Vector3 backward = -(rotation * Vector3.forward);
-            Vector3 desired = _smoothedFocus + backward * _distance;
+            float desiredCollisionDistance = _distance;
 
             if (Physics.SphereCast(
                     _smoothedFocus,
@@ -89,8 +102,18 @@ namespace Stormframe.Player
                     ~LayerMask.GetMask("Ignore Raycast"),
                     QueryTriggerInteraction.Ignore))
             {
-                desired = _smoothedFocus + backward * Mathf.Max(hit.distance - 0.15f, 0.5f);
+                desiredCollisionDistance = Mathf.Max(
+                    hit.distance - 0.15f,
+                    MinimumCollisionDistance);
             }
+
+            if (_collisionDistance <= 0f) _collisionDistance = _distance;
+            _collisionDistance = Mathf.SmoothDamp(
+                _collisionDistance,
+                desiredCollisionDistance,
+                ref _collisionVelocity,
+                _collisionSmoothTime);
+            Vector3 desired = _smoothedFocus + backward * _collisionDistance;
 
             transform.SetPositionAndRotation(desired, rotation);
         }
@@ -113,6 +136,8 @@ namespace Stormframe.Player
             _ => 18f
         };
 
+        private float MinimumCollisionDistance => _mode == CameraMode.Close ? 2.75f : 3.5f;
+
         private void ReadModeSelection()
         {
             Keyboard keyboard = Keyboard.current;
@@ -127,6 +152,7 @@ namespace Stormframe.Player
         public void SetMode(CameraMode mode)
         {
             _mode = mode;
+            if (!UsesBuildingFocus) ClearBuildingFocus();
             _camera.orthographic = mode == CameraMode.Isometric;
             _camera.fieldOfView = mode switch
             {
@@ -161,6 +187,9 @@ namespace Stormframe.Player
                     _camera.orthographicSize = 8f;
                     break;
             }
+
+            _collisionDistance = _distance;
+            _collisionVelocity = 0f;
         }
 
         private void OnGUI()

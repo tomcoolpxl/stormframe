@@ -4,7 +4,7 @@
 
 The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It currently includes third-person robot movement, F1/F2 construction cameras, grid-snapped building, ten modular pieces, rotation, transactional line drawing, deletion, piece picking, reusable assemblies, undo/redo, and construction save/load. The preferred visual direction is modular with visible seams and no connector knobs.
 
-Latest validated baseline: 20 automated tests pass and the Windows player builds successfully.
+Latest validated baseline: 22 automated tests pass and the Windows player builds successfully.
 
 ## Hard Development Rules
 
@@ -21,6 +21,7 @@ Latest validated baseline: 20 automated tests pass and the Windows player builds
 - The player is a small hovering robot stranded on a natural island.
 - Do not restore the removed crash-site decoration.
 - Line placement is orthogonal only. Mouse-down fixes the start; dragging locks X, Y, or Z and changes an unfixed preview; mouse-up commits the complete line.
+- Construction input must never unexpectedly reframe away from the robot.
 
 ## Completed Bundles
 
@@ -41,6 +42,12 @@ Latest validated baseline: 20 automated tests pass and the Windows player builds
 - The selected piece or assembly footprint controls spacing, including half-height vertical layers.
 - Diagonal lines are impossible, blocked lines place nothing, and one undo removes the full line.
 - Lines are capped at 128 stamps to protect the prototype from accidental runaway placement.
+
+## Camera Framing Guarantees
+
+- F1 and F2 always focus on the robot and discard any previous construction focus.
+- F4 and F5 frame a bounded midpoint between the robot and construction pointer instead of replacing the robot as the focus.
+- Obstacle correction is smoothed and cannot collapse the camera to a near-zero distance.
 
 ## Active Gate
 
