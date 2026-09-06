@@ -2,9 +2,9 @@
 
 ## Current State
 
-The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It currently includes third-person robot movement, F1/F2 construction cameras, grid-snapped building, ten modular pieces, rotation, transactional line drawing, deletion, piece picking, reusable assemblies, undo/redo, and construction save/load. The preferred visual direction is modular with visible seams and no connector knobs.
+The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It includes third-person robot movement, one refocusable construction camera, grid-snapped building, ten modular pieces, rotation, transactional line drawing, deletion and collapse, support visualization, piece picking, reusable assemblies, undo/redo, and construction save/load. The visual direction is modular with visible seams and no connector knobs.
 
-Latest validated baseline: 22 automated tests pass and the Windows player builds successfully.
+Latest validated baseline: 26 automated tests pass and the Windows player builds successfully.
 
 ## Hard Development Rules
 
@@ -16,8 +16,8 @@ Latest validated baseline: 22 automated tests pass and the Windows player builds
 
 ## Decisions From Playtesting
 
-- F2 is the default general camera; F1 is best for close building.
-- Use modular pieces without stud-like knobs.
+- Use one third-person camera. `F1` resets and refocuses it; there are no selectable camera modes.
+- Modular is the only construction visual style. Use visible seams without stud-like knobs.
 - The player is a small hovering robot stranded on a natural island.
 - Do not restore the removed crash-site decoration.
 - Line placement is orthogonal only. Mouse-down fixes the start; dragging locks X, Y, or Z and changes an unfixed preview; mouse-up commits the complete line.
@@ -25,7 +25,7 @@ Latest validated baseline: 22 automated tests pass and the Windows player builds
 
 ## Completed Bundles
 
-- Unity foundation, Input System movement, and five camera experiments.
+- Unity foundation, Input System movement, and a single refocusable camera selected after camera experiments.
 - Ten-piece construction palette with half-height vertical snapping.
 - Modular no-knob visuals and a closed slope mesh.
 - Transactional orthogonal line placement, picking, delete, undo/redo, and save/load.
@@ -45,14 +45,22 @@ Latest validated baseline: 22 automated tests pass and the Windows player builds
 
 ## Camera Framing Guarantees
 
-- F1 and F2 always focus on the robot and discard any previous construction focus.
-- F4 and F5 frame a bounded midpoint between the robot and construction pointer instead of replacing the robot as the focus.
+- The camera always focuses on the robot; construction input never changes its focus target.
+- `F1` restores the standard yaw, pitch, distance, field of view, and robot focus.
 - Obstacle correction is smoothed and cannot collapse the camera to a near-zero distance.
+
+## Structural Prototype
+
+- Every piece touching ground is a support root. Support propagates through face-adjacent occupied grid cells.
+- `V` toggles the structural overlay: green is connected to ground and red is unsupported.
+- Removing a piece recalculates support immediately. Newly disconnected pieces collapse together.
+- Collapsed pieces become physical debris for four seconds, then disappear.
+- Removal and the complete resulting collapse are one undoable command.
 
 ## Active Gate
 
-Playtest orthogonal line drawing and reusable assemblies. Confirm axis choice, vertical intent, preview readability, footprint spacing, capture scope, and rotation feel natural.
+Playtest structural readability and failure. Confirm that support paths are understandable, expected structures remain standing, collapse feels predictable, and debris is useful rather than noisy. Continue checking line-axis choice and reusable assemblies.
 
 ## After This Bundle
 
-If assembly building feels good, begin the structural prototype as one bundle: support calculation, structural visualization, predictable failure, and temporary debris physics.
+If structural behavior feels good, begin the storm prototype as one bundle: controllable wind and rain, structural loading, clear damage feedback, and a resettable test storm.

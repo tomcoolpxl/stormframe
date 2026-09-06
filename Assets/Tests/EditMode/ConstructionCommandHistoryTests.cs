@@ -77,5 +77,37 @@ namespace Stormframe.Tests
                     new Vector3Int(9, 0, 10), new Vector3Int(9, 0, 11)
                 }));
         }
+
+        [Test]
+        public void DemolishPiece_RemovingBaseCollapsesUnsupportedStackAsOneCommand()
+        {
+            var world = new ConstructionWorld();
+            var history = new ConstructionCommandHistory();
+            world.TryPlace(PieceKind.Cube, Vector3Int.zero, 0, out _);
+            world.TryPlace(PieceKind.Cube, Vector3Int.up * 2, 0, out _);
+            world.TryPlace(PieceKind.HalfBlock, Vector3Int.up * 4, 0, out _);
+            var command = new DemolishPieceCommand(Vector3Int.zero);
+
+            Assert.That(history.Execute(command, world), Is.True);
+            Assert.That(command.CollapsedPieces, Has.Count.EqualTo(2));
+            Assert.That(world.PieceCount, Is.Zero);
+            Assert.That(history.Undo(world), Is.True);
+            Assert.That(world.PieceCount, Is.EqualTo(3));
+            Assert.That(history.Redo(world), Is.True);
+            Assert.That(world.PieceCount, Is.Zero);
+        }
+
+        [Test]
+        public void DemolishPiece_RemovingTopLeavesSupportedBase()
+        {
+            var world = new ConstructionWorld();
+            world.TryPlace(PieceKind.Cube, Vector3Int.zero, 0, out _);
+            world.TryPlace(PieceKind.Cube, Vector3Int.up * 2, 0, out _);
+            var command = new DemolishPieceCommand(Vector3Int.up * 2);
+
+            Assert.That(command.Execute(world), Is.True);
+            Assert.That(command.CollapsedPieces, Is.Empty);
+            Assert.That(world.PieceCount, Is.EqualTo(1));
+        }
     }
 }

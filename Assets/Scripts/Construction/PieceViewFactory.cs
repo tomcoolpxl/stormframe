@@ -6,8 +6,7 @@ namespace Stormframe.Construction
     {
         public static GameObject Create(
             PlacedPiece piece,
-            bool ghost,
-            ConstructionVisualStyle style = ConstructionVisualStyle.Modular)
+            bool ghost)
         {
             var view = new GameObject();
             view.name = ghost ? $"Ghost {piece.Kind}" : $"{piece.Kind} {piece.Id:N}";
@@ -29,7 +28,6 @@ namespace Stormframe.Construction
                 geometry.transform,
                 geometry.GetComponent<Renderer>(),
                 baseScale);
-            visual.ApplyStyle(style);
 
             if (ghost)
             {

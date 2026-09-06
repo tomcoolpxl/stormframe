@@ -88,5 +88,31 @@ namespace Stormframe.Tests
 
             Assert.That(world.GetConnectedPieces(first.Id), Has.Count.EqualTo(2));
         }
+
+        [Test]
+        public void GetSupportedPieceIds_PropagatesSupportFromGround()
+        {
+            var world = new ConstructionWorld();
+            world.TryPlace(PieceKind.Cube, Vector3Int.zero, 0, out PlacedPiece basePiece);
+            world.TryPlace(PieceKind.Cube, Vector3Int.up * 2, 0, out PlacedPiece middlePiece);
+            world.TryPlace(PieceKind.HalfBlock, Vector3Int.up * 4, 0, out PlacedPiece topPiece);
+
+            var supported = world.GetSupportedPieceIds();
+
+            Assert.That(supported, Does.Contain(basePiece.Id));
+            Assert.That(supported, Does.Contain(middlePiece.Id));
+            Assert.That(supported, Does.Contain(topPiece.Id));
+            Assert.That(world.GetUnsupportedPieces(), Is.Empty);
+        }
+
+        [Test]
+        public void GetUnsupportedPieces_IdentifiesDisconnectedStructure()
+        {
+            var world = new ConstructionWorld();
+            world.TryPlace(PieceKind.Cube, Vector3Int.up * 4, 0, out PlacedPiece floating);
+
+            Assert.That(world.GetUnsupportedPieces(), Has.Count.EqualTo(1));
+            Assert.That(world.GetUnsupportedPieces()[0].Id, Is.EqualTo(floating.Id));
+        }
     }
 }

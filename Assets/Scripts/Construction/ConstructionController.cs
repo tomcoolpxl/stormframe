@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using Stormframe.Construction.Commands;
 using Stormframe.Construction.Persistence;
-using Stormframe.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,12 +14,11 @@ namespace Stormframe.Construction
         private readonly Dictionary<System.Guid, GameObject> _views = new();
         private readonly List<GameObject> _assemblyGhosts = new();
         private Camera _camera;
-        private ThirdPersonCamera _thirdPersonCamera;
         private GameObject _ghost;
         private ConstructionAssembly _assembly;
         private ConstructionAssembly _linePreview;
         private PieceKind _selectedKind;
-        private ConstructionVisualStyle _visualStyle = ConstructionVisualStyle.Modular;
+        private bool _showStructuralSupport;
         private Vector3Int _candidateCell;
         private int _quarterTurns;
         private bool _hasCandidate;
@@ -38,7 +36,6 @@ namespace Stormframe.Construction
         private void Awake()
         {
             _camera = Camera.main;
-            _thirdPersonCamera = _camera.GetComponent<ThirdPersonCamera>();
         }
 
         private void Update()
@@ -57,7 +54,7 @@ namespace Stormframe.Construction
 
             if (Keyboard.current.vKey.wasPressedThisFrame)
             {
-                CycleVisualStyle();
+                ToggleStructuralSupport();
             }
 
             if (Keyboard.current.escapeKey.wasPressedThisFrame && _isDrawingLine)
@@ -150,7 +147,6 @@ namespace Stormframe.Construction
         {
             if (_isDrawingLine)
             {
-                _thirdPersonCamera?.SetBuildingFocus(ConstructionGrid.CellToWorld(_lineStartCell));
                 return;
             }
 
@@ -167,7 +163,6 @@ namespace Stormframe.Construction
             if (_assembly != null)
             {
                 UpdateAssemblyGhosts(_assembly, _candidateCell, _quarterTurns);
-                _thirdPersonCamera?.SetBuildingFocus(ConstructionGrid.CellToWorld(_candidateCell));
                 return;
             }
 
@@ -176,8 +171,6 @@ namespace Stormframe.Construction
             _ghost.transform.position = ConstructionGrid.CellToWorld(_candidateCell)
                 + PieceGeometry.VisualOffset(_selectedKind, _quarterTurns);
             _ghost.transform.rotation = Quaternion.Euler(0f, _quarterTurns * 90f, 0f);
-            _thirdPersonCamera?.SetBuildingFocus(_ghost.transform.position);
-
             bool valid = _world.CanPlace(_selectedKind, _candidateCell, _quarterTurns);
             _ghost.GetComponent<PieceVisual>().SetPlacementValidity(valid);
         }
@@ -241,9 +234,14 @@ namespace Stormframe.Construction
         {
             if (!TryRaycast(out RaycastHit hit)) return;
             PlacedPieceView view = hit.collider.GetComponentInParent<PlacedPieceView>();
-            if (view == null || !_history.Execute(new RemovePieceCommand(view.Anchor), _world)) return;
+            if (view == null) return;
+            var command = new DemolishPieceCommand(view.Anchor);
+            if (!_history.Execute(command, _world)) return;
             RebuildViews();
-            _status = "Removed piece";
+            SpawnCollapseDebris(command.CollapsedPieces);
+            _status = command.CollapsedPieces.Count == 0
+                ? "Removed piece; structure remains supported"
+                : $"Removed support; {command.CollapsedPieces.Count} piece(s) collapsed";
         }
 
         private bool TryRaycast(out RaycastHit hit)
@@ -272,7 +270,7 @@ namespace Stormframe.Construction
             }
 
             var preview = new PlacedPiece(System.Guid.Empty, _selectedKind, _candidateCell, _quarterTurns);
-            _ghost = PieceViewFactory.Create(preview, true, _visualStyle);
+            _ghost = PieceViewFactory.Create(preview, true);
         }
 
         private void UpdateAssemblyGhosts(
@@ -292,7 +290,7 @@ namespace Stormframe.Construction
                         placement.Kind,
                         placement.Anchor,
                         placement.QuarterTurns);
-                    _assemblyGhosts.Add(PieceViewFactory.Create(preview, true, _visualStyle));
+                    _assemblyGhosts.Add(PieceViewFactory.Create(preview, true));
                 }
             }
 
@@ -374,18 +372,44 @@ namespace Stormframe.Construction
             return new Vector2(endScreen.x - startScreen.x, endScreen.y - startScreen.y);
         }
 
-        private void CycleVisualStyle()
+        private void ToggleStructuralSupport()
         {
-            _visualStyle = (ConstructionVisualStyle)(((int)_visualStyle + 1) % 3);
-            foreach (GameObject view in _views.Values)
-            {
-                view.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
-            }
+            _showStructuralSupport = !_showStructuralSupport;
+            ApplyStructuralSupportOverlay();
+            _status = _showStructuralSupport ? "Support overlay enabled" : "Support overlay disabled";
+        }
 
-            if (_ghost != null) _ghost.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
-            foreach (GameObject assemblyGhost in _assemblyGhosts)
+        private void ApplyStructuralSupportOverlay()
+        {
+            HashSet<System.Guid> supported = _showStructuralSupport
+                ? _world.GetSupportedPieceIds()
+                : null;
+            foreach (KeyValuePair<System.Guid, GameObject> entry in _views)
             {
-                assemblyGhost.GetComponent<PieceVisual>().ApplyStyle(_visualStyle);
+                bool? isSupported = _showStructuralSupport
+                    ? supported.Contains(entry.Key)
+                    : null;
+                entry.Value.GetComponent<PieceVisual>().SetStructuralHighlight(isSupported);
+            }
+        }
+
+        private void SpawnCollapseDebris(IReadOnlyList<PlacedPiece> collapsedPieces)
+        {
+            foreach (PlacedPiece piece in collapsedPieces)
+            {
+                GameObject debris = PieceViewFactory.Create(piece, false);
+                debris.name = $"Debris {piece.Kind}";
+                debris.layer = LayerMask.NameToLayer("Ignore Raycast");
+                var body = debris.AddComponent<Rigidbody>();
+                body.mass = 0.6f;
+                body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+                Vector3 direction = new Vector3(
+                    Mathf.Sin(piece.Anchor.x * 1.7f),
+                    1.25f,
+                    Mathf.Cos(piece.Anchor.z * 1.3f));
+                body.AddForce(direction * 1.4f, ForceMode.Impulse);
+                body.AddTorque(direction * 2f, ForceMode.Impulse);
+                debris.AddComponent<TemporaryDebris>().Initialize();
             }
         }
 
@@ -426,8 +450,9 @@ namespace Stormframe.Construction
             _views.Clear();
             foreach (PlacedPiece piece in _world.Pieces)
             {
-                _views.Add(piece.Id, PieceViewFactory.Create(piece, false, _visualStyle));
+                _views.Add(piece.Id, PieceViewFactory.Create(piece, false));
             }
+            ApplyStructuralSupportOverlay();
         }
 
         private void SaveConstruction()
@@ -464,8 +489,8 @@ namespace Stormframe.Construction
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 470, 22), "5 Half | 6 Long | 7 Pillar | 8 Wall | 9 Cylinder | 0 Rod");
             GUI.Label(new Rect(28, 102, 510, 22), $"Left-drag preview, release place | Right delete | Pieces: {_world.PieceCount}");
-            GUI.Label(new Rect(28, 122, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
-            GUI.Label(new Rect(28, 142, 375, 22), $"V visual style: {_visualStyle}");
+            GUI.Label(new Rect(28, 122, 355, 22), "F1 refocus camera | Middle-drag orbit | Wheel zoom");
+            GUI.Label(new Rect(28, 142, 375, 22), $"V support overlay: {(_showStructuralSupport ? "On" : "Off")}");
             GUI.Label(new Rect(28, 162, 460, 22), "C pick | Ctrl+Z undo | Ctrl+Y redo | Ctrl+S/L save/load");
             GUI.Label(new Rect(28, 182, 510, 22), "B capture connected assembly | R rotate | Esc cancel assembly");
             string selection = _assembly == null ? _selectedKind.ToString() : $"Assembly x{_assembly.PieceCount}";

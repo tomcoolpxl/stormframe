@@ -14,13 +14,13 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 - `WASD`: move
 - Middle mouse drag: orbit camera
 - Mouse wheel: zoom
-- `F1`–`F5`: close, medium, high, building-orbit, or isometric camera
+- `F1`: reset and refocus the camera on the robot
 - `1`–`4`: cube, beam, plate, or slope
 - `5`–`0`: half block, long block, pillar, wall panel, cylinder, or rod
 - `R`: rotate the selected piece or captured assembly
-- `V`: cycle modular (seamed), natural, and blockout visual treatments
+- `V`: toggle structural support visualization (green supported, red unsupported)
 - Hold left mouse: preview a line; drag to lock X, Y, or Z; release to place it
-- Right click: delete
+- Right click: remove a piece; disconnected pieces collapse as temporary debris
 - `C`: pick the pointed-at piece type and rotation
 - `B`: capture every piece connected to the pointed piece as a reusable assembly; drag to repeat it in a line
 - `Esc`: leave assembly placement mode

@@ -774,27 +774,9 @@ Later stress tests can increase this substantially.
 
 ---
 
-# Camera laboratory
+# Camera decision
 
-The camera is a core mechanic.
-
-It must be prototyped rather than decided theoretically.
-
-First person must never be necessary.
-
-Possible camera experiments:
-
-```text
-F1  closer third-person
-F2  medium third-person
-F3  high third-person
-F4  building orbit camera
-F5  orthographic/isometric experiment
-```
-
-These are temporary experiments.
-
-We may ultimately keep only one or two.
+The camera experiments are complete. Keep one third-person perspective camera, always focused on the robot. `F1` resets yaw, pitch, zoom, and focus. Do not retain selectable camera modes. First person must never be necessary.
 
 ---
 
@@ -2489,9 +2471,9 @@ Can detailed construction be performed comfortably without entering first person
 
 Current result:
 
-* F2 medium third-person is the default general camera.
-* F1 close third-person is retained for detailed work.
-* F3 high, F4 building orbit, and F5 isometric were less effective and remain experiments rather than primary modes.
+* Keep one medium-distance third-person camera.
+* `F1` resets and refocuses that camera on the robot.
+* Remove the close, high, building-orbit, and isometric modes.
 
 ---
 
@@ -2515,6 +2497,7 @@ Current result:
 * Keep the modular treatment and visible seams.
 * Do not show stud-like connector knobs on finished pieces.
 * Communicate snapping through the placement preview rather than permanent connector geometry.
+* Modular is the only visual style; remove natural and blockout style switching.
 
 ---
 
@@ -2624,11 +2607,11 @@ These remain open:
 | --------------------------- | -------------------------- |
 | Final engine forever        | Open                       |
 | Bevy migration              | Only if justified          |
-| Exact camera                | Open                       |
+| Exact camera                | One refocusable third-person camera |
 | Exact construction scale    | Open                       |
 | Studs                       | Open                       |
 | Exact block proportions     | Open                       |
-| Final visual style          | Open                       |
+| Final visual style          | Modular only               |
 | Final player appearance     | Open                       |
 | Island size                 | Open                       |
 | Island generation algorithm | Open                       |
@@ -2893,9 +2876,7 @@ No procedural island.
 
 No final architecture.
 
-Then add several selectable camera experiments.
-
-Then begin testing construction scale and visual style.
+Camera and visual-style experiments are complete. Continue testing construction scale, line drawing, reusable assemblies, and structural behavior with the selected single camera and modular-only presentation.
 
 The first meaningful success is not:
 

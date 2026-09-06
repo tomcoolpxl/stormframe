@@ -28,6 +28,23 @@ namespace Stormframe.Tests
             UnityEngine.Object.DestroyImmediate(view);
         }
 
+        [Test]
+        public void StructuralHighlight_WhenCleared_RestoresModularColor()
+        {
+            var piece = new PlacedPiece(Guid.NewGuid(), PieceKind.Cube, Vector3Int.zero, 0);
+            GameObject view = PieceViewFactory.Create(piece, false);
+            PieceVisual visual = view.GetComponent<PieceVisual>();
+            Renderer renderer = view.GetComponentInChildren<Renderer>();
+            Color modularColor = renderer.sharedMaterial.color;
+
+            visual.SetStructuralHighlight(false);
+            Assert.That(renderer.sharedMaterial.color, Is.Not.EqualTo(modularColor));
+            visual.SetStructuralHighlight(null);
+            Assert.That(renderer.sharedMaterial.color, Is.EqualTo(modularColor));
+
+            UnityEngine.Object.DestroyImmediate(view);
+        }
+
         private static void CountEdge(Dictionary<(int, int), int> counts, int first, int second)
         {
             var edge = first < second ? (first, second) : (second, first);

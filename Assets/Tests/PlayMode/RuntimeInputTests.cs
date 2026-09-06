@@ -34,57 +34,19 @@ namespace Stormframe.Tests
         }
 
         [UnityTest]
-        public IEnumerator ThirdPersonCamera_WhenIsometricSelected_UsesOrthographicLens()
+        public IEnumerator ThirdPersonCamera_ResetView_UsesSinglePerspectiveSetup()
         {
             var targetObject = new GameObject("Test Target");
             var cameraObject = new GameObject("Test Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
             ThirdPersonCamera cameraController = cameraObject.AddComponent<ThirdPersonCamera>();
             cameraController.SetTarget(targetObject.transform);
+            camera.orthographic = true;
 
-            cameraController.SetMode(CameraMode.Isometric);
+            cameraController.ResetView();
 
-            Assert.That(cameraController.Mode, Is.EqualTo(CameraMode.Isometric));
-            Assert.That(camera.orthographic, Is.True);
-
-            Object.Destroy(cameraObject);
-            Object.Destroy(targetObject);
-            yield return null;
-        }
-
-        [UnityTest]
-        public IEnumerator ThirdPersonCamera_BuildingFocus_RemainsNearPlayer()
-        {
-            var targetObject = new GameObject("Test Target");
-            var cameraObject = new GameObject("Test Camera");
-            cameraObject.AddComponent<Camera>();
-            ThirdPersonCamera cameraController = cameraObject.AddComponent<ThirdPersonCamera>();
-            cameraController.SetTarget(targetObject.transform);
-            cameraController.SetMode(CameraMode.BuildingOrbit);
-
-            cameraController.SetBuildingFocus(new Vector3(20f, 0f, 0f));
-
-            Vector3 playerFocus = targetObject.transform.position + Vector3.up * 1.25f;
-            Assert.That(Vector3.Distance(cameraController.IntendedFocus, playerFocus), Is.LessThanOrEqualTo(4.001f));
-
-            Object.Destroy(cameraObject);
-            Object.Destroy(targetObject);
-            yield return null;
-        }
-
-        [UnityTest]
-        public IEnumerator ThirdPersonCamera_MediumMode_ClearsBuildingFocus()
-        {
-            var targetObject = new GameObject("Test Target");
-            var cameraObject = new GameObject("Test Camera");
-            cameraObject.AddComponent<Camera>();
-            ThirdPersonCamera cameraController = cameraObject.AddComponent<ThirdPersonCamera>();
-            cameraController.SetTarget(targetObject.transform);
-            cameraController.SetMode(CameraMode.BuildingOrbit);
-            cameraController.SetBuildingFocus(new Vector3(8f, 0f, 0f));
-
-            cameraController.SetMode(CameraMode.Medium);
-
+            Assert.That(camera.orthographic, Is.False);
+            Assert.That(camera.fieldOfView, Is.EqualTo(56f));
             Assert.That(
                 cameraController.IntendedFocus,
                 Is.EqualTo(targetObject.transform.position + Vector3.up * 1.25f));
@@ -92,6 +54,28 @@ namespace Stormframe.Tests
             Object.Destroy(cameraObject);
             Object.Destroy(targetObject);
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ThirdPersonCamera_F1RefocusesPerspectiveCamera()
+        {
+            var targetObject = new GameObject("Test Target");
+            var cameraObject = new GameObject("Test Camera");
+            Camera camera = cameraObject.AddComponent<Camera>();
+            ThirdPersonCamera cameraController = cameraObject.AddComponent<ThirdPersonCamera>();
+            cameraController.SetTarget(targetObject.transform);
+            camera.orthographic = true;
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+
+            Press(keyboard.f1Key);
+            yield return null;
+            Release(keyboard.f1Key);
+
+            Assert.That(camera.orthographic, Is.False);
+            Assert.That(camera.fieldOfView, Is.EqualTo(56f));
+
+            Object.Destroy(cameraObject);
+            Object.Destroy(targetObject);
         }
     }
 }

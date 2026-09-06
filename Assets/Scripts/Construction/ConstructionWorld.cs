@@ -119,6 +119,66 @@ namespace Stormframe.Construction
             return connected;
         }
 
+        public HashSet<Guid> GetSupportedPieceIds()
+        {
+            var supported = new HashSet<Guid>();
+            var pending = new Queue<Guid>();
+            foreach (PlacedPiece piece in _pieces.Values)
+            {
+                bool grounded = false;
+                foreach (Vector3Int cell in PieceGeometry.OccupiedCells(
+                             piece.Kind,
+                             piece.Anchor,
+                             piece.QuarterTurns))
+                {
+                    if (cell.y != 0) continue;
+                    grounded = true;
+                    break;
+                }
+
+                if (!grounded || !supported.Add(piece.Id)) continue;
+                pending.Enqueue(piece.Id);
+            }
+
+            Vector3Int[] directions =
+            {
+                Vector3Int.left, Vector3Int.right, Vector3Int.down,
+                Vector3Int.up, Vector3Int.back, Vector3Int.forward
+            };
+            while (pending.Count > 0)
+            {
+                PlacedPiece piece = _pieces[pending.Dequeue()];
+                foreach (Vector3Int cell in PieceGeometry.OccupiedCells(
+                             piece.Kind,
+                             piece.Anchor,
+                             piece.QuarterTurns))
+                {
+                    foreach (Vector3Int direction in directions)
+                    {
+                        if (_occupancy.TryGetValue(cell + direction, out Guid neighborId)
+                            && supported.Add(neighborId))
+                        {
+                            pending.Enqueue(neighborId);
+                        }
+                    }
+                }
+            }
+
+            return supported;
+        }
+
+        public IReadOnlyList<PlacedPiece> GetUnsupportedPieces()
+        {
+            HashSet<Guid> supported = GetSupportedPieceIds();
+            var unsupported = new List<PlacedPiece>();
+            foreach (PlacedPiece piece in _pieces.Values)
+            {
+                if (!supported.Contains(piece.Id)) unsupported.Add(piece);
+            }
+
+            return unsupported;
+        }
+
         public void Clear()
         {
             _pieces.Clear();
