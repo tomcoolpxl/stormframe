@@ -19,10 +19,10 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 - `5`–`0`: half block, long block, pillar, wall panel, cylinder, or rod
 - `R`: rotate the selected piece or captured assembly
 - `V`: cycle modular (seamed), natural, and blockout visual treatments
-- Hold left mouse and drag: place continuous rows
+- Hold left mouse: preview a line; drag to lock X, Y, or Z; release to place it
 - Right click: delete
 - `C`: pick the pointed-at piece type and rotation
-- `B`: capture every piece connected to the pointed piece as a reusable assembly
+- `B`: capture every piece connected to the pointed piece as a reusable assembly; drag to repeat it in a line
 - `Esc`: leave assembly placement mode
 - `Ctrl+Z` / `Ctrl+Y`: undo / redo
 - `Ctrl+S` / `Ctrl+L`: save / load construction

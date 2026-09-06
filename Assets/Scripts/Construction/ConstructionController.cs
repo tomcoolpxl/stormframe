@@ -13,18 +13,27 @@ namespace Stormframe.Construction
         private readonly ConstructionWorld _world = new();
         private readonly ConstructionCommandHistory _history = new();
         private readonly Dictionary<System.Guid, GameObject> _views = new();
-        private readonly HashSet<Vector3Int> _placementStrokeCells = new();
         private readonly List<GameObject> _assemblyGhosts = new();
         private Camera _camera;
         private ThirdPersonCamera _thirdPersonCamera;
         private GameObject _ghost;
         private ConstructionAssembly _assembly;
+        private ConstructionAssembly _linePreview;
         private PieceKind _selectedKind;
         private ConstructionVisualStyle _visualStyle = ConstructionVisualStyle.Modular;
         private Vector3Int _candidateCell;
         private int _quarterTurns;
         private bool _hasCandidate;
+        private bool _isDrawingLine;
+        private bool _lineAxisLocked;
+        private Vector2 _lineStartMouse;
+        private Vector3Int _lineStartCell;
+        private ConstructionAxis _lineAxis;
+        private int _lineSegments;
         private string _status = "Ready";
+
+        private const float AxisLockPixels = 14f;
+        private const int MaximumLineSegments = 127;
 
         private void Awake()
         {
@@ -40,7 +49,7 @@ namespace Stormframe.Construction
             ReadEditingCommands();
             UpdateCandidate();
 
-            if (Keyboard.current.rKey.wasPressedThisFrame)
+            if (Keyboard.current.rKey.wasPressedThisFrame && !_isDrawingLine)
             {
                 _quarterTurns = (_quarterTurns + 1) % 4;
                 RebuildGhost();
@@ -51,29 +60,33 @@ namespace Stormframe.Construction
                 CycleVisualStyle();
             }
 
-            if (Keyboard.current.escapeKey.wasPressedThisFrame && _assembly != null)
+            if (Keyboard.current.escapeKey.wasPressedThisFrame && _isDrawingLine)
+            {
+                CancelLine("Line cancelled");
+            }
+            else if (Keyboard.current.escapeKey.wasPressedThisFrame && _assembly != null)
             {
                 _assembly = null;
                 RebuildGhost();
                 _status = "Assembly mode cancelled";
             }
 
-            if (Mouse.current.leftButton.wasReleasedThisFrame)
+            if (Mouse.current.leftButton.wasPressedThisFrame && _hasCandidate)
             {
-                _placementStrokeCells.Clear();
+                BeginLine();
             }
 
-            bool extendingPlacementStroke = Mouse.current.leftButton.wasPressedThisFrame
-                || Mouse.current.delta.ReadValue().sqrMagnitude >= 1f;
-            if (_hasCandidate
-                && Mouse.current.leftButton.isPressed
-                && extendingPlacementStroke
-                && _placementStrokeCells.Add(_candidateCell))
+            if (_isDrawingLine && Mouse.current.leftButton.isPressed)
             {
-                PlaceCandidate();
+                UpdateLinePreview();
             }
 
-            if (Mouse.current.rightButton.wasPressedThisFrame)
+            if (_isDrawingLine && Mouse.current.leftButton.wasReleasedThisFrame)
+            {
+                CommitLine();
+            }
+
+            if (!_isDrawingLine && Mouse.current.rightButton.wasPressedThisFrame)
             {
                 RemovePointedPiece();
             }
@@ -127,6 +140,7 @@ namespace Stormframe.Construction
             if (Keyboard.current.digit0Key.wasPressedThisFrame) _selectedKind = PieceKind.Rod;
             if (previous != _selectedKind)
             {
+                if (_isDrawingLine) CancelLine("Line cancelled");
                 _assembly = null;
                 RebuildGhost();
             }
@@ -134,6 +148,12 @@ namespace Stormframe.Construction
 
         private void UpdateCandidate()
         {
+            if (_isDrawingLine)
+            {
+                _thirdPersonCamera?.SetBuildingFocus(ConstructionGrid.CellToWorld(_lineStartCell));
+                return;
+            }
+
             _hasCandidate = TryRaycast(out RaycastHit hit);
             if (!_hasCandidate)
             {
@@ -146,7 +166,7 @@ namespace Stormframe.Construction
 
             if (_assembly != null)
             {
-                UpdateAssemblyGhosts();
+                UpdateAssemblyGhosts(_assembly, _candidateCell, _quarterTurns);
                 _thirdPersonCamera?.SetBuildingFocus(ConstructionGrid.CellToWorld(_candidateCell));
                 return;
             }
@@ -162,20 +182,59 @@ namespace Stormframe.Construction
             _ghost.GetComponent<PieceVisual>().SetPlacementValidity(valid);
         }
 
-        private void PlaceCandidate()
+        private void BeginLine()
         {
-            IConstructionCommand command = _assembly == null
-                ? new PlacePieceCommand(_selectedKind, _candidateCell, _quarterTurns)
-                : new PlaceAssemblyCommand(_assembly, _candidateCell, _quarterTurns);
-            if (!_history.Execute(command, _world))
+            _isDrawingLine = true;
+            _lineAxisLocked = false;
+            _lineSegments = 0;
+            _lineStartCell = _candidateCell;
+            _lineStartMouse = Mouse.current.position.ReadValue();
+            RefreshLinePreview();
+        }
+
+        private void UpdateLinePreview()
+        {
+            Vector2 drag = Mouse.current.position.ReadValue() - _lineStartMouse;
+            if (!_lineAxisLocked && drag.magnitude >= AxisLockPixels)
             {
+                _lineAxis = SelectLineAxis(drag);
+                _lineAxisLocked = true;
+            }
+
+            int segments = _lineAxisLocked ? CalculateLineSegments(drag, _lineAxis) : 0;
+            if (segments == _lineSegments) return;
+            _lineSegments = segments;
+            RefreshLinePreview();
+        }
+
+        private void CommitLine()
+        {
+            ConstructionAssembly completedLine = _linePreview;
+            int stampCount = Mathf.Abs(_lineSegments) + 1;
+            int pieceCount = completedLine.PieceCount;
+            bool placed = _history.Execute(
+                new PlaceAssemblyCommand(completedLine, Vector3Int.zero, 0),
+                _world);
+
+            _isDrawingLine = false;
+            _linePreview = null;
+            RebuildGhost();
+            if (!placed)
+            {
+                _status = "Line blocked — nothing placed";
                 return;
             }
 
             RebuildViews();
-            _status = _assembly == null
-                ? $"Placed {_selectedKind}"
-                : $"Stamped assembly ({_assembly.PieceCount} pieces)";
+            _status = $"Placed {stampCount}-stamp line ({pieceCount} pieces)";
+        }
+
+        private void CancelLine(string status)
+        {
+            _isDrawingLine = false;
+            _linePreview = null;
+            RebuildGhost();
+            _status = status;
         }
 
         private void RemovePointedPiece()
@@ -200,9 +259,15 @@ namespace Stormframe.Construction
             foreach (GameObject assemblyGhost in _assemblyGhosts) Destroy(assemblyGhost);
             _assemblyGhosts.Clear();
 
+            if (_isDrawingLine && _linePreview != null)
+            {
+                UpdateAssemblyGhosts(_linePreview, Vector3Int.zero, 0);
+                return;
+            }
+
             if (_assembly != null)
             {
-                UpdateAssemblyGhosts();
+                UpdateAssemblyGhosts(_assembly, _candidateCell, _quarterTurns);
                 return;
             }
 
@@ -210,9 +275,12 @@ namespace Stormframe.Construction
             _ghost = PieceViewFactory.Create(preview, true, _visualStyle);
         }
 
-        private void UpdateAssemblyGhosts()
+        private void UpdateAssemblyGhosts(
+            ConstructionAssembly assembly,
+            Vector3Int origin,
+            int quarterTurns)
         {
-            IReadOnlyList<AssemblyPlacement> placements = _assembly.GetPlacements(_candidateCell, _quarterTurns);
+            IReadOnlyList<AssemblyPlacement> placements = assembly.GetPlacements(origin, quarterTurns);
             if (_assemblyGhosts.Count != placements.Count)
             {
                 foreach (GameObject assemblyGhost in _assemblyGhosts) Destroy(assemblyGhost);
@@ -228,7 +296,7 @@ namespace Stormframe.Construction
                 }
             }
 
-            bool valid = _assembly.CanPlace(_world, _candidateCell, _quarterTurns);
+            bool valid = assembly.CanPlace(_world, origin, quarterTurns);
             for (int index = 0; index < placements.Count; index++)
             {
                 AssemblyPlacement placement = placements[index];
@@ -239,6 +307,71 @@ namespace Stormframe.Construction
                 assemblyGhost.transform.rotation = Quaternion.Euler(0f, placement.QuarterTurns * 90f, 0f);
                 assemblyGhost.GetComponent<PieceVisual>().SetPlacementValidity(valid);
             }
+        }
+
+        private void RefreshLinePreview()
+        {
+            ConstructionAssembly source = SelectedSourceAssembly();
+            ConstructionAxis axis = _lineAxisLocked ? _lineAxis : ConstructionAxis.X;
+            _linePreview = ConstructionLinePlanner.CreateLine(
+                source,
+                _lineStartCell,
+                _quarterTurns,
+                axis,
+                _lineSegments);
+            RebuildGhost();
+
+            int stampCount = Mathf.Abs(_lineSegments) + 1;
+            string axisLabel = _lineAxisLocked ? _lineAxis.ToString() : "waiting for direction";
+            _status = $"Preview {stampCount} stamp(s) on {axisLabel}; release to place";
+        }
+
+        private ConstructionAssembly SelectedSourceAssembly()
+        {
+            if (_assembly != null) return _assembly;
+            var piece = new PlacedPiece(System.Guid.Empty, _selectedKind, Vector3Int.zero, 0);
+            return new ConstructionAssembly(new[] { piece }, Vector3Int.zero);
+        }
+
+        private ConstructionAxis SelectLineAxis(Vector2 drag)
+        {
+            ConstructionAxis bestAxis = ConstructionAxis.X;
+            float bestScore = float.NegativeInfinity;
+            foreach (ConstructionAxis axis in new[]
+                     {
+                         ConstructionAxis.X, ConstructionAxis.Y, ConstructionAxis.Z
+                     })
+            {
+                Vector2 screenAxis = ScreenAxisVector(axis);
+                if (screenAxis.sqrMagnitude < 16f) continue;
+                float alignment = Mathf.Abs(Vector2.Dot(drag.normalized, screenAxis.normalized));
+                float score = alignment + Mathf.Min(screenAxis.magnitude, 100f) * 0.0001f;
+                if (score <= bestScore) continue;
+                bestScore = score;
+                bestAxis = axis;
+            }
+
+            return bestAxis;
+        }
+
+        private int CalculateLineSegments(Vector2 drag, ConstructionAxis axis)
+        {
+            Vector2 screenAxis = ScreenAxisVector(axis);
+            if (screenAxis.sqrMagnitude < 16f) return 0;
+            float projectedSteps = Vector2.Dot(drag, screenAxis.normalized) / screenAxis.magnitude;
+            return Mathf.Clamp(Mathf.RoundToInt(projectedSteps), -MaximumLineSegments, MaximumLineSegments);
+        }
+
+        private Vector2 ScreenAxisVector(ConstructionAxis axis)
+        {
+            ConstructionAssembly source = SelectedSourceAssembly();
+            int spacing = ConstructionLinePlanner.GetStampSpacing(source, _quarterTurns, axis);
+            Vector3Int cellStep = ConstructionLinePlanner.AxisVector(axis) * spacing;
+            Vector3 startWorld = ConstructionGrid.CellToWorld(_lineStartCell);
+            Vector3 endWorld = ConstructionGrid.CellToWorld(_lineStartCell + cellStep);
+            Vector3 startScreen = _camera.WorldToScreenPoint(startWorld);
+            Vector3 endScreen = _camera.WorldToScreenPoint(endWorld);
+            return new Vector2(endScreen.x - startScreen.x, endScreen.y - startScreen.y);
         }
 
         private void CycleVisualStyle()
@@ -283,7 +416,6 @@ namespace Stormframe.Construction
 
             _assembly = new ConstructionAssembly(connected, view.Anchor);
             _quarterTurns = 0;
-            _placementStrokeCells.Clear();
             RebuildGhost();
             _status = $"Captured connected assembly ({_assembly.PieceCount} pieces)";
         }
@@ -331,7 +463,7 @@ namespace Stormframe.Construction
             GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 470, 22), "5 Half | 6 Long | 7 Pillar | 8 Wall | 9 Cylinder | 0 Rod");
-            GUI.Label(new Rect(28, 102, 460, 22), $"Hold left + drag to place | Right delete | Pieces: {_world.PieceCount}");
+            GUI.Label(new Rect(28, 102, 510, 22), $"Left-drag preview, release place | Right delete | Pieces: {_world.PieceCount}");
             GUI.Label(new Rect(28, 122, 355, 22), "F1 close | F2 medium | F3 high | F4 build | F5 iso");
             GUI.Label(new Rect(28, 142, 375, 22), $"V visual style: {_visualStyle}");
             GUI.Label(new Rect(28, 162, 460, 22), "C pick | Ctrl+Z undo | Ctrl+Y redo | Ctrl+S/L save/load");

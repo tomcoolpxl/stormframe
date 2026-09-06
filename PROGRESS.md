@@ -2,9 +2,9 @@
 
 ## Current State
 
-The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It currently includes third-person robot movement, F1/F2 construction cameras, grid-snapped building, ten modular pieces, rotation, continuous row placement, deletion, piece picking, undo/redo, and construction save/load. The preferred visual direction is modular with visible seams and no connector knobs.
+The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It currently includes third-person robot movement, F1/F2 construction cameras, grid-snapped building, ten modular pieces, rotation, transactional line drawing, deletion, piece picking, reusable assemblies, undo/redo, and construction save/load. The preferred visual direction is modular with visible seams and no connector knobs.
 
-Latest validated baseline: 16 automated tests pass and the Windows player builds successfully.
+Latest validated baseline: 20 automated tests pass and the Windows player builds successfully.
 
 ## Hard Development Rules
 
@@ -20,23 +20,31 @@ Latest validated baseline: 16 automated tests pass and the Windows player builds
 - Use modular pieces without stud-like knobs.
 - The player is a small hovering robot stranded on a natural island.
 - Do not restore the removed crash-site decoration.
-- Holding and dragging the left mouse button should place continuous rows.
+- Line placement is orthogonal only. Mouse-down fixes the start; dragging locks X, Y, or Z and changes an unfixed preview; mouse-up commits the complete line.
 
 ## Completed Bundles
 
 - Unity foundation, Input System movement, and five camera experiments.
 - Ten-piece construction palette with half-height vertical snapping.
 - Modular no-knob visuals and a closed slope mesh.
-- Continuous row placement, picking, delete, undo/redo, and save/load.
+- Transactional orthogonal line placement, picking, delete, undo/redo, and save/load.
 - Player-created reusable assemblies:
   - `B` captures the connected component containing the pointed piece.
   - The captured group receives a full green/red placement preview.
-  - `R` rotates the group and left-click stamps it repeatedly.
-  - Each stamp validates and undoes/redoes as one atomic command.
+  - `R` rotates the group and left-drag previews a repeated orthogonal line.
+  - Mouse release validates and commits the complete line as one atomic command.
+
+## Line Drawing Behavior
+
+- No real pieces are created while the mouse is held, so previews cannot alter their own raycast target.
+- After a short drag threshold, screen direction selects and locks the closest projected world axis.
+- The selected piece or assembly footprint controls spacing, including half-height vertical layers.
+- Diagonal lines are impossible, blocked lines place nothing, and one undo removes the full line.
+- Lines are capped at 128 stamps to protect the prototype from accidental runaway placement.
 
 ## Active Gate
 
-Playtest reusable assemblies in the prototype scene. Confirm that capture scope, anchor choice, rotation, preview readability, and repeated stamping feel natural.
+Playtest orthogonal line drawing and reusable assemblies. Confirm axis choice, vertical intent, preview readability, footprint spacing, capture scope, and rotation feel natural.
 
 ## After This Bundle
 
