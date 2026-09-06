@@ -2,9 +2,9 @@
 
 ## Current State
 
-The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It includes third-person robot movement, one refocusable construction camera, grid-snapped building, ten modular pieces, rotation, transactional line drawing, deletion and collapse, support visualization, piece picking, reusable assemblies, undo/redo, and construction save/load. The visual direction is modular with visible seams and no connector knobs.
+The playable Unity prototype opens at `Assets/Scenes/Prototype.unity`. It includes third-person robot movement and jumping, one refocusable construction camera, grid-snapped building, ten modular pieces, rotation, transactional line drawing, deletion and collapse, support visualization, piece picking, reusable assemblies, undo/redo, and construction save/load. The visual direction is modular with visible seams and no connector knobs.
 
-Latest validated baseline: 26 automated tests pass and the Windows player builds successfully.
+Latest validated baseline: 27 automated tests pass and the Windows player builds successfully.
 
 ## Hard Development Rules
 
@@ -22,6 +22,7 @@ Latest validated baseline: 26 automated tests pass and the Windows player builds
 - Do not restore the removed crash-site decoration.
 - Line placement is orthogonal only. Mouse-down fixes the start; dragging locks X, Y, or Z and changes an unfixed preview; mouse-up commits the complete line.
 - Construction input must never unexpectedly reframe away from the robot.
+- `Space` makes the robot jump only while grounded.
 
 ## Completed Bundles
 

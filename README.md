@@ -12,6 +12,7 @@ Open the repository directory as a project in Unity Hub, then load `Assets/Scene
 ## Prototype controls
 
 - `WASD`: move
+- `Space`: jump
 - Middle mouse drag: orbit camera
 - Mouse wheel: zoom
 - `F1`: reset and refocus the camera on the robot

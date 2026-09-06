@@ -10,6 +10,7 @@ namespace Stormframe.Player
         [SerializeField] private float _speed = 6f;
         [SerializeField] private float _turnSpeed = 14f;
         [SerializeField] private float _gravity = -20f;
+        [SerializeField] private float _jumpHeight = 1.4f;
         private CharacterController _controller;
         private float _verticalSpeed;
 
@@ -41,9 +42,28 @@ namespace Stormframe.Player
                     _turnSpeed * Time.deltaTime);
             }
 
-            if (_controller.isGrounded && _verticalSpeed < 0f) _verticalSpeed = -2f;
+            if (IsGrounded())
+            {
+                if (_verticalSpeed < 0f) _verticalSpeed = -2f;
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                {
+                    _verticalSpeed = Mathf.Sqrt(_jumpHeight * -2f * _gravity);
+                }
+            }
             _verticalSpeed += _gravity * Time.deltaTime;
             _controller.Move((input * _speed + Vector3.up * _verticalSpeed) * Time.deltaTime);
+        }
+
+        private bool IsGrounded()
+        {
+            if (_controller.isGrounded) return true;
+            float probeDistance = _controller.height * 0.5f + 0.12f;
+            return Physics.Raycast(
+                transform.position,
+                Vector3.down,
+                probeDistance,
+                ~LayerMask.GetMask("Ignore Raycast"),
+                QueryTriggerInteraction.Ignore);
         }
 
         private static float ReadAxis(KeyControl negative, KeyControl positive)

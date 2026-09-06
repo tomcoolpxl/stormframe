@@ -485,7 +485,7 @@ namespace Stormframe.Construction
         private void OnGUI()
         {
             GUI.Box(new Rect(16, 16, 540, 228), "Stormframe: Stranded Robot Prototype");
-            GUI.Label(new Rect(28, 42, 310, 22), "WASD move | Middle-drag orbit | Wheel zoom");
+            GUI.Label(new Rect(28, 42, 390, 22), "WASD move | Space jump | Middle-drag orbit | Wheel zoom");
             GUI.Label(new Rect(28, 62, 310, 22), "1 Cube | 2 Beam | 3 Plate | 4 Slope | R rotate");
             GUI.Label(new Rect(28, 82, 470, 22), "5 Half | 6 Long | 7 Pillar | 8 Wall | 9 Cylinder | 0 Rod");
             GUI.Label(new Rect(28, 102, 510, 22), $"Left-drag preview, release place | Right delete | Pieces: {_world.PieceCount}");
